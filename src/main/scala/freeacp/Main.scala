@@ -8,7 +8,7 @@ import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 trait Common {
-  def atom(f: => Unit, name: String = "suspend") = new Suspend[Eval](Eval.always { f; Success }) { override def toString = name }
+  def atom(f: => Unit, name: String = "suspend") = new Suspend[Eval](Eval.always { f; Success[Eval]() }) { override def toString = name }
   def pln(str: String, name: String = "suspend") = atom(println(str), name)
 
   implicit val futureComonad: Comonad[Future] = new Comonad[Future] {
@@ -16,13 +16,23 @@ trait Common {
     def extract[A](x: Future[A]): A = Await.result(x, Duration.Inf)
     def map[A, B](fa: Future[A])(f: A => B): Future[B] = fa.map(f)
   }
+
+  implicit val evalChoice: MonoidK[Eval] = new MonoidK[Eval] {
+    def combineK[A](a: Eval[A], b: Eval[A]): Eval[A] = b
+    def empty[A]: Eval[Nothing] = Eval.always { ??? }
+  }
+
+  implicit val futureChoice: MonoidK[Future] = new MonoidK[Future] {
+    def combineK[A](a: Future[A], b: Future[A]): Future[A] = Future.firstCompletedOf(List(a, b))
+    def empty[A]: Future[A] = Future.never
+  }
 }
 
 object Main extends App with Common {
   val a = pln("Hello", "a")
   val b = pln("World", "b")
   val c = pln("!", "c")
-  val d = Failure
+  val d = Failure[Eval]()
 
   val t1 = a
   val t2 = Sequence(a, b, c)
@@ -33,24 +43,24 @@ object Main extends App with Common {
   val t7 = Sequence(a)
   val t8 = Choice(Nil)
 
-  Tree.run[Eval](Sequence(Suspend[Eval](Eval.now(Failure))), debug = true)
+  t5.run(true)
 }
 
 object ArbitraryFunctor extends App with Common {
-  val pa = Promise[Result]()
-  val pb = Promise[Result]()
+  val pa = Promise[Result[Future]]()
+  val pb = Promise[Result[Future]]()
 
   val a = Suspend[Future](pa.future)
   val b = Suspend[Future](pb.future)
-  val c = Suspend[Future](Future { println("Hello")    ; Success })
-  val d = Suspend[Future](Future { println("World")    ; Success })
-  val e = Suspend[Future](Future { println("Something"); Success })
-  val f = Suspend[Future](Future { println("Else")     ; Success })
+  val c = Suspend[Future](Future { println("Hello")    ; Success[Future]() })
+  val d = Suspend[Future](Future { println("World")    ; Success[Future]() })
+  val e = Suspend[Future](Future { println("Something"); Success[Future]() })
+  val f = Suspend[Future](Future { println("Else")     ; Success[Future]() })
 
-  val t1: Tree = a * c * d ++ b //* e * f
+  val t1: Tree[Future] = a * c * d ++ b * e
   
-  val task = Future(Tree.run[Future](t1, Future.firstCompletedOf, debug = true))
-  pa.success(Success)
+  val task = Future(t1.run(debug = true))
+  pb.success(Success[Future]())
 
   Await.result(task, Duration.Inf)
 }
