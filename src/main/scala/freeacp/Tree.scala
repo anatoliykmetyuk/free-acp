@@ -47,6 +47,19 @@ trait Tree[S[_]] {
     }
     loop(this)
   }
+
+  // See Cats' Free's `runM`
+  def runM[G[_]](f: S[Tree[S]] => G[Tree[S]], debug: Boolean = false)(implicit C: Comonad[G], S: MonoidK[S], F: Functor[S]): Result[G] = {
+    def loop(t: Tree[S]): Result[G] = {
+      if (debug) println(s"\nDEBUG:\n$t")
+      t match {
+        case _: Success[S] => Success[G]()
+        case _: Failure[S] => Failure[G]()
+        case t => loop { if (!resume.isDefinedAt(t)) rewrite.apply(t) else C.extract( f(resume apply t) ) }
+      }
+    }
+    loop(this)
+  }
 }
 
 object Tree {

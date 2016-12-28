@@ -64,3 +64,39 @@ object ArbitraryFunctor extends App with Common {
 
   Await.result(task, Duration.Inf)
 }
+
+object FreeAcp extends App {
+  trait TalkerT[+T]
+  case class Say(s: String) extends TalkerT[Result[TalkerT]]
+  type Talker = Tree[TalkerT]
+
+  def say(s: String): Talker = Suspend[TalkerT](Say(s))
+  def e: Talker = Success[TalkerT]()
+  def d: Talker = Failure[TalkerT]()
+
+  val program: Talker = say("Foo") * say("Bar") * d * say("Char") ++ say("Char") * say("Boo")
+
+  case class  CombineTalker[A](t1: TalkerT[A], t2: TalkerT[A]) extends TalkerT[A]
+  case class  MapTalker[A, B](t1: TalkerT[A], f: A => B) extends TalkerT[B]
+  case object EmptyTalker extends TalkerT[Nothing]
+
+  implicit def monoidKTalker: MonoidK[TalkerT] = new MonoidK[TalkerT] {
+    override def combineK[A](t1: TalkerT[A], t2: TalkerT[A]): TalkerT[A] = CombineTalker(t1, t2)
+    override def empty[A]: TalkerT[A] = EmptyTalker
+  }
+
+  implicit def functorTalker: Functor[TalkerT] = new Functor[TalkerT] {
+    override def map[A, B](t: TalkerT[A])(f: A => B): TalkerT[B] = MapTalker(t, f)
+  }
+
+  def compiler[A]: TalkerT[A] => Eval[A] = _ match {
+    case Say(s: String) => Eval.now { println(s); Success[TalkerT]().asInstanceOf[A] }
+
+    case CombineTalker(t1, t2) => compiler(t2)
+    case MapTalker(t1, f) => Functor[Eval].map(compiler(t1))(f)
+    case EmptyTalker => Eval.always { Success[TalkerT]().asInstanceOf[A] }
+  }
+
+  program.runM(compiler, true)
+
+}
