@@ -1,8 +1,9 @@
 val ScalaVer = "2.12.1"
 
-val Cats       = "0.8.1"
-val Shapeless  = "2.3.2"
-val ScalaCheck = "1.13.4"
+val Cats          = "0.8.1"
+val Shapeless     = "2.3.2"
+val ScalaCheck    = "1.13.4"
+val KindProjector = "0.9.3"
 
 lazy val commonSettings = Seq(
   name    := "free-acp"
@@ -13,6 +14,7 @@ lazy val commonSettings = Seq(
   , "com.chuusai"    %% "shapeless"  % Shapeless
   , "org.scalacheck" %% "scalacheck" % ScalaCheck % "test"
   )
+, addCompilerPlugin("org.spire-math" %% "kind-projector" % KindProjector)
 , scalacOptions ++= Seq(
       "-deprecation",
       "-encoding", "UTF-8",

@@ -43,7 +43,7 @@ object Main extends App with Common {
   val t7 = Sequence(a)
   val t8 = Choice(Nil)
 
-  t5.run(true)
+  // t5.run(true)
 }
 
 object ArbitraryFunctor extends App with Common {
@@ -59,10 +59,10 @@ object ArbitraryFunctor extends App with Common {
 
   val t1: Tree[Future] = a * c * d ++ b * e
   
-  val task = Future(t1.run(debug = true))
-  pb.success(Success[Future]())
+  // val task = Future(t1.run(debug = true))
+  // pb.success(Success[Future]())
 
-  Await.result(task, Duration.Inf)
+  // Await.result(task, Duration.Inf)
 }
 
 object FreeAcp extends App {
@@ -73,12 +73,14 @@ object FreeAcp extends App {
   def say(s: String): Talker = Suspend[TalkerT](Say(s))
   def e: Talker = Success[TalkerT]()
   def d: Talker = Failure[TalkerT]()
+  def loop: Talker = Loop[TalkerT]()
 
-  val program: Talker = say("Foo") * say("Bar") * d * say("Char") ++ say("Char") * say("Boo")
+  val program: Talker = say("Foo") * say("Bar") * say("Char") * loop
 
   case class  CombineTalker[A](t1: TalkerT[A], t2: TalkerT[A]) extends TalkerT[A]
   case class  MapTalker[A, B](t1: TalkerT[A], f: A => B) extends TalkerT[B]
   case object EmptyTalker extends TalkerT[Nothing]
+  case class  PureTalker[A](x: () => A) extends TalkerT[A]
 
   implicit def monoidKTalker: MonoidK[TalkerT] = new MonoidK[TalkerT] {
     override def combineK[A](t1: TalkerT[A], t2: TalkerT[A]): TalkerT[A] = CombineTalker(t1, t2)
@@ -89,14 +91,19 @@ object FreeAcp extends App {
     override def map[A, B](t: TalkerT[A])(f: A => B): TalkerT[B] = MapTalker(t, f)
   }
 
+  implicit def pureTalker: Pure[TalkerT] = new ( (() => ?) ~> TalkerT ) {
+    override def apply[A](x: () => A): TalkerT[A] = PureTalker(x)
+  }
+
   def compiler[A]: TalkerT[A] => Eval[A] = _ match {
-    case Say(s: String) => Eval.now { println(s); Success[TalkerT]().asInstanceOf[A] }
+    case Say(s: String) => Eval.always { println(s); Success[TalkerT]().asInstanceOf[A] }
 
     case CombineTalker(t1, t2) => compiler(t2)
     case MapTalker(t1, f) => Functor[Eval].map(compiler(t1))(f)
     case EmptyTalker => Eval.always { Success[TalkerT]().asInstanceOf[A] }
+    case PureTalker(x) => Eval.always(x())
   }
 
-  program.runM(compiler, true)
+  program.runM(compiler, false)
 
 }
