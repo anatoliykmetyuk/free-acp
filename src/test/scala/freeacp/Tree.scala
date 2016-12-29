@@ -9,29 +9,41 @@ import org.scalacheck.Gen
 import org.scalacheck.Gen._
 
 
-object TreeProps extends Properties("Tree") with TreeGens with EvalImpl {
+object TreeProps extends Properties("Tree") with TreeGens {
   import LanguageT._
 
   implicit def arbTree = Arbitrary(tree)
 
-  property("Runnability") = forAll { t: Language =>
-    try t.runM(compiler[Eval](defaultCompiler)).isInstanceOf[Result[LanguageT]]
-    catch { case t: Throwable => t.printStackTrace; false }
-  }
+  property("Runnability") = forAll { t: Language => run(t).isInstanceOf[Result[LanguageT]] }
 
-  // property("Choice with `1` as one of the operands must always evaluate to 1") = forAll { (t1: Tree, t2: Tree, t3: Tree) =>
-  //   Tree.run[Eval](Choice(t1, t2, Success, t3)) == Success
-  // }
+  property("Choice with `1` as an option is `1`") =
+    forAll { (x: Language, y: Language, z: Language) => x + y + ε + z <-> ε }
+  
+  property("(x + 1) * y == xy + y") =
+    forAll { (x: Language, y: Language) => (x + ε) * y <-> x * y + y }
 
-  // property("0x == 0") = forAll { t: Tree => Tree.run[Eval](Sequence(Failure, t)) == Failure     }
-  // property("1x == x") = forAll { t: Tree => Tree.run[Eval](Sequence(Success, t)) == Tree.run[Eval](t) }
-  // property("(x + 1) * y == xy + y") = forAll { (x: Tree, y: Tree) =>
-  //   Tree.run[Eval](Sequence(Choice(x, Success), y)) == Tree.run[Eval](Choice(Sequence(x, y), y))
-  // }
+  // From https://en.wikipedia.org/wiki/Algebra_of_Communicating_Processes#Basic_process_algebra
+  property("Commutativity of +"         ) = forAll { (x: Language, y: Language)              => x + y <-> y + x               }
+  property("Associativity of +"         ) = forAll { (x: Language, y: Language, z: Language) => (x + y) + z <-> x + (y + z)   }
+  property("x + x = x"                  ) = forAll {  x: Language                            => x + x <-> x                   }
+  property("Distributivity of * over +" ) = forAll { (x: Language, y: Language, z: Language) => (x + y) * z <-> x * z + y * z }
+  property("Associativity of *"         ) = forAll { (x: Language, y: Language, z: Language) => (x * y) * z <-> x * (y * z)   }
+
+  property("δ + x = x" ) = forAll { x: Language => δ + x <-> x }
+  property("δ * x = δ" ) = forAll { x: Language => δ * x <-> δ }
+  property("ε * x == x") = forAll { x: Language => ε * x <-> x }
 }
 
-trait TreeGens {
+trait TreeGens extends EvalImpl {
   import LanguageT._
+
+  def run(t: Language) =
+    try t.runM(compiler[Eval](defaultCompiler))
+    catch { case t: Throwable => t.printStackTrace; throw t }
+
+  implicit class Equivalence(x: Language) {
+    def <->(y: Language): Boolean = run(x) == run(y)
+  }
 
   def tree: Gen[Language] = lzy(oneOf(leaf, operator))
   

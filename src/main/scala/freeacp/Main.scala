@@ -17,8 +17,8 @@ object EvalTest extends App with EvalImpl with SayElem {
   val t2 = a * Sequence(b, c)
   val t3 = a * δ * b * c
   val t4 = a * (b * c)
-  val t5 = a * b ++ c * δ
-  val t6 = Sequence(Sequence(Sequence(b, c, δ))) ++ Sequence(Sequence(a, b, c))
+  val t5 = a * b + c * δ
+  val t6 = Sequence(Sequence(Sequence(b, c, δ))) + Sequence(Sequence(a, b, c))
   val t7 = Sequence(a)
   val t8 = Choice(Nil)
 
@@ -39,7 +39,7 @@ object FutureTest extends App with FutureImpl with SayElem with PromiseElem {
   val e = say    ("Something" , "e")
   val f = say    ("Else"      , "f")
 
-  val t1: Language = a * c * d ++ b * e * f
+  val t1: Language = a * c * d + b * e * f
   
   val task = Future { t1.runM(compiler[Future](defaultCompiler, sayCompiler, promiseCompiler), debug = true) }
   pb.success(ε)

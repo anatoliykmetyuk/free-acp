@@ -52,7 +52,7 @@ trait Tree[S[_]] {
   }
 
   // See Cats' Free's `runM`
-  def runM[G[_]](f: S ~> G, debug: Boolean = false, steps: Int = 20)(implicit C: Comonad[G], S: MonoidK[S], F: Functor[S], pure: Suspended[S]): Result[G] = {
+  def runM[G[_]](f: S ~> G, debug: Boolean = false, steps: Int = 1000)(implicit C: Comonad[G], S: MonoidK[S], F: Functor[S], pure: Suspended[S]): Result[G] = {
     def loop(t: Tree[S], i: Int): Result[G] = if (i > 0) {
       if (debug) println(s"\nDEBUG:\n$t")
       t match {
@@ -60,14 +60,14 @@ trait Tree[S[_]] {
         case _: Failure[S] => Failure[G]()
         case t => loop ({ if (!resume.isDefinedAt(t)) rewrite.apply(t) else C.extract( f(resume apply t) ) }, i - 1)
       }
-    } else throw new NotImplementedError
+    } else throw new StackOverflowError("Too many execution steps!")
     loop(this, steps)
   }
+
+  def *(other: Tree[S]) = Sequence[S](this, other)
+  def +(other: Tree[S]) = Choice  [S](this, other)
 }
 
-object Tree {
-  implicit def toOps[S[_]](t: Tree[S]): TreeOps[S] = new TreeOps[S](t)
-}
 
 case class Suspend [S[_]](a : S[Tree[S]]   ) extends Tree[S] { override def toString = s"suspend"                 }
 case class Sequence[S[_]](ts: List[Tree[S]]) extends Tree[S] { override def toString = s"(${ts.mkString(" * ")})" }
@@ -87,7 +87,3 @@ object Choice {
   def apply[S[_]](ts: Tree[S]*): Choice[S] = Choice[S](ts.toList)
 }
 
-class TreeOps[S[_]](t: Tree[S]) {
-  def * (other: Tree[S]) = Sequence[S](t, other)
-  def ++(other: Tree[S]) = Choice  [S](t, other)
-}
