@@ -1,68 +1,50 @@
 package freeacp
 
-import cats._
-import cats.instances.future._
+import cats.Eval
 
-import scala.concurrent._
-import scala.concurrent.duration._
+import scala.concurrent.{Future, Promise, Await}
+import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 
-trait Common {
-  def atom(f: => Unit, name: String = "suspend") = new Suspend[Eval](Eval.always { f; Success[Eval]() }) { override def toString = name }
-  def pln(str: String, name: String = "suspend") = atom(println(str), name)
+object EvalTest extends App with EvalImpl with SayElem {
+  import LanguageT._
 
-  implicit val futureComonad: Comonad[Future] = new Comonad[Future] {
-    def coflatMap[A, B](fa: Future[A])(f: Future[A] => B): Future[B] = Future(f(fa))
-    def extract[A](x: Future[A]): A = Await.result(x, Duration.Inf)
-    def map[A, B](fa: Future[A])(f: A => B): Future[B] = fa.map(f)
-  }
-
-  implicit val evalChoice: MonoidK[Eval] = new MonoidK[Eval] {
-    def combineK[A](a: Eval[A], b: Eval[A]): Eval[A] = b
-    def empty[A]: Eval[Nothing] = Eval.always { ??? }
-  }
-
-  implicit val futureChoice: MonoidK[Future] = new MonoidK[Future] {
-    def combineK[A](a: Future[A], b: Future[A]): Future[A] = Future.firstCompletedOf(List(a, b))
-    def empty[A]: Future[A] = Future.never
-  }
-}
-
-object Main extends App with Common {
-  val a = pln("Hello", "a")
-  val b = pln("World", "b")
-  val c = pln("!", "c")
-  val d = Failure[Eval]()
+  val a = say("Hello", "a")
+  val b = say("World", "b")
+  val c = say("!", "c")
 
   val t1 = a
-  val t2 = Sequence(a, b, c)
-  val t3 = Sequence(a, d, b, c)
-  val t4 = Sequence(a, Sequence(b, c))
-  val t5 = Choice(Sequence(a, b), Sequence(c, d))
-  val t6 = Choice(Sequence(Sequence(Sequence(b, c, d))), Sequence(Sequence(a, b, c)))
+  val t2 = a * Sequence(b, c)
+  val t3 = a * δ * b * c
+  val t4 = a * (b * c)
+  val t5 = a * b ++ c * δ
+  val t6 = Sequence(Sequence(Sequence(b, c, δ))) ++ Sequence(Sequence(a, b, c))
   val t7 = Sequence(a)
   val t8 = Choice(Nil)
 
-  // t5.run(true)
+  t5.runM(compiler[Eval](defaultCompiler, sayCompiler), true)
 }
 
-object ArbitraryFunctor extends App with Common {
-  val pa = Promise[Result[Future]]()
-  val pb = Promise[Result[Future]]()
+object FutureTest extends App with FutureImpl with SayElem with PromiseElem {
+  import LanguageT._
 
-  val a = Suspend[Future](pa.future)
-  val b = Suspend[Future](pb.future)
-  val c = Suspend[Future](Future { println("Hello")    ; Success[Future]() })
-  val d = Suspend[Future](Future { println("World")    ; Success[Future]() })
-  val e = Suspend[Future](Future { println("Something"); Success[Future]() })
-  val f = Suspend[Future](Future { println("Else")     ; Success[Future]() })
-
-  val t1: Tree[Future] = a * c * d ++ b * e
+  val pa = Promise[Result[LanguageT]]()
+  val pb = Promise[Result[LanguageT]]
   
-  // val task = Future(t1.run(debug = true))
-  // pb.success(Success[Future]())
+  val a = promise(pa          , "a")
+  val b = promise(pb          , "b")
 
-  // Await.result(task, Duration.Inf)
+  val c = say    ("Hello"     , "c")
+  val d = say    ("World"     , "d")
+  val e = say    ("Something" , "e")
+  val f = say    ("Else"      , "f")
+
+  val t1: Language = a * c * d ++ b * e * f
+  
+  val task = Future { t1.runM(compiler[Future](defaultCompiler[Future], sayCompiler, promiseCompiler), debug = true) }
+  pb.success(ε)
+
+  Await.result(task, Duration.Inf)
 }
 
 object FreeAcp extends App with EvalImpl with SayElem {
@@ -70,28 +52,4 @@ object FreeAcp extends App with EvalImpl with SayElem {
 
   val program = atom { println("Hello") } * atom { println("World" ) } * say("Foo")
   program.runM(compiler[Eval](defaultCompiler, sayCompiler), false)
-}
-
-trait EvalImpl {
-  implicit val suspendedEval: Suspended[Eval] = new ( (() => ?) ~> Eval ) {
-    override def apply[A](x: () => A): Eval[A] = Eval.always(x())
-  }
-
-  implicit val monoidKEval: MonoidK[Eval] = new MonoidK[Eval] {
-    override def combineK[A](e1: Eval[A], e2: Eval[A]): Eval[A] = e2
-    override def empty[A] = Eval.always[Nothing] { throw new NotImplementedError }
-  }
-}
-
-trait SayElem {
-  import LanguageT._
-
-  case class Say(s: String) extends LanguageT[Result[LanguageT]]
-  def say(s: String): Tree[LanguageT] = Suspend[LanguageT](Say(s))
-
-  def sayCompiler[F[_]: Suspended]: PartialCompiler[F] = _ => new (LanguageT ~> OptionK[F, ?]) {
-    override def apply[A](s: LanguageT[A]): Option[F[A]] = ({
-      case Say(s) => implicitly[Suspended[F]].apply { () => println(s); e.asInstanceOf[A] }
-    }: PartialFunction[LanguageT[A], F[A]]).lift.apply(s)
-  }
 }

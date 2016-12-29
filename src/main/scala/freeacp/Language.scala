@@ -16,9 +16,9 @@ object LanguageT {
 
   def atom(a: => Unit): Language = Suspend[LanguageT](Atom( () => a ))
 
-  def e   : Language = Success[LanguageT]()
-  def d   : Language = Failure[LanguageT]()
-  def loop: Language = Loop   [LanguageT]()
+  def ε = Success[LanguageT]()
+  def δ = Failure[LanguageT]()
+  def ω = Loop   [LanguageT]()
 
 
   implicit def monoidKLanguage: MonoidK[LanguageT] = new MonoidK[LanguageT] {
