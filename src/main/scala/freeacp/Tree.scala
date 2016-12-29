@@ -17,7 +17,7 @@ trait Tree[S[_]] {
     case Sequence(Failure()   :: x) => Failure()
 
     // Choice
-    case Choice(Nil) => Success()
+    case Choice(Nil) => Failure()
     case Choice  (Choice(x) :: y) => Choice(x ++ y)  // choice-associativity
     case Sequence(Choice(x) :: y) => Choice(x.map { t => Sequence(t :: y) }) // seq-associativity
     case Choice(x) if x.contains(Success()) => Success()
