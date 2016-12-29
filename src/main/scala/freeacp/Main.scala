@@ -65,46 +65,33 @@ object ArbitraryFunctor extends App with Common {
   // Await.result(task, Duration.Inf)
 }
 
-object FreeAcp extends App {
-  trait TalkerT[+T]
-  case class Say(s: String) extends TalkerT[Result[TalkerT]]
-  type Talker = Tree[TalkerT]
+object FreeAcp extends App with EvalImpl with SayElem {
+  import LanguageT._
 
-  def say(s: String): Talker = Suspend[TalkerT](Say(s))
-  def e: Talker = Success[TalkerT]()
-  def d: Talker = Failure[TalkerT]()
-  def loop: Talker = Loop[TalkerT]()
+  val program = atom { println("Hello") } * atom { println("World" ) } * say("Foo")
+  program.runM(compiler[Eval](defaultCompiler, sayCompiler), false)
+}
 
-  val program: Talker = say("Foo") * say("Bar") * say("Char") * loop
-
-  case class  CombineTalker[A](t1: TalkerT[A], t2: TalkerT[A]) extends TalkerT[A]
-  case class  MapTalker[A, B](t1: TalkerT[A], f: A => B) extends TalkerT[B]
-  case object EmptyTalker extends TalkerT[Nothing]
-  case class  PureTalker[A](x: () => A) extends TalkerT[A]
-
-  implicit def monoidKTalker: MonoidK[TalkerT] = new MonoidK[TalkerT] {
-    override def combineK[A](t1: TalkerT[A], t2: TalkerT[A]): TalkerT[A] = CombineTalker(t1, t2)
-    override def empty[A]: TalkerT[A] = EmptyTalker
+trait EvalImpl {
+  implicit val suspendedEval: Suspended[Eval] = new ( (() => ?) ~> Eval ) {
+    override def apply[A](x: () => A): Eval[A] = Eval.always(x())
   }
 
-  implicit def functorTalker: Functor[TalkerT] = new Functor[TalkerT] {
-    override def map[A, B](t: TalkerT[A])(f: A => B): TalkerT[B] = MapTalker(t, f)
+  implicit val monoidKEval: MonoidK[Eval] = new MonoidK[Eval] {
+    override def combineK[A](e1: Eval[A], e2: Eval[A]): Eval[A] = e2
+    override def empty[A] = Eval.always[Nothing] { throw new NotImplementedError }
   }
+}
 
-  implicit def pureTalker: Pure[TalkerT] = new ( (() => ?) ~> TalkerT ) {
-    override def apply[A](x: () => A): TalkerT[A] = PureTalker(x)
+trait SayElem {
+  import LanguageT._
+
+  case class Say(s: String) extends LanguageT[Result[LanguageT]]
+  def say(s: String): Tree[LanguageT] = Suspend[LanguageT](Say(s))
+
+  def sayCompiler[F[_]: Suspended]: PartialCompiler[F] = _ => new (LanguageT ~> OptionK[F, ?]) {
+    override def apply[A](s: LanguageT[A]): Option[F[A]] = ({
+      case Say(s) => implicitly[Suspended[F]].apply { () => println(s); e.asInstanceOf[A] }
+    }: PartialFunction[LanguageT[A], F[A]]).lift.apply(s)
   }
-
-  val compiler: TalkerT ~> Eval = new (TalkerT ~> Eval) {
-    override def apply[A](x: TalkerT[A]): Eval[A] = x match {
-      case Say(s: String) => Eval.always { println(s); Success[TalkerT]().asInstanceOf[A] }
-
-      case CombineTalker(t1, t2) => compiler(t2)
-      case MapTalker(t1, f) => Functor[Eval].map(compiler(t1))(f)
-      case EmptyTalker => Eval.always { Success[TalkerT]().asInstanceOf[A] }
-      case PureTalker(x) => Eval.always(x())
-    }
-  }
-
-  program.runM(compiler, false)
 }

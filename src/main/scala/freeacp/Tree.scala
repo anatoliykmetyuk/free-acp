@@ -6,7 +6,7 @@ import cats.instances.list._
 trait Tree[S[_]] {
   def terminal(t: Tree[S]): Boolean = t.isInstanceOf[Success[S]] || t.isInstanceOf[Failure[S]]
 
-  def rewrite(implicit F: Functor[S], S: MonoidK[S], pure: Pure[S]): PartialFunction[Tree[S], Tree[S]] = _ match {
+  def rewrite(implicit F: Functor[S], S: MonoidK[S], pure: Suspended[S]): PartialFunction[Tree[S], Tree[S]] = _ match {
     // Sequence
     case Sequence(xs) if xs.contains(Loop()) =>
       def seq: Tree[S] = Sequence( xs.filter(_ != Loop()) :+ Suspend( pure(() => seq) ) )
@@ -39,7 +39,7 @@ trait Tree[S[_]] {
     case Choice(x @ _ :: _) if x.forall(resume.isDefinedAt) => Foldable[List].combineAll(x.map(resume))(S.algebra[Tree[S]])
   }
 
-  def run(debug: Boolean = false)(implicit C: Comonad[S], S: MonoidK[S], pure: Pure[S]): Result[S] = {
+  def run(debug: Boolean = false)(implicit C: Comonad[S], S: MonoidK[S], pure: Suspended[S]): Result[S] = {
     @annotation.tailrec
     def loop(t: Tree[S]): Result[S] = {
       if (debug) println(s"\nDEBUG:\n$t")
@@ -52,7 +52,7 @@ trait Tree[S[_]] {
   }
 
   // See Cats' Free's `runM`
-  def runM[G[_]](f: S ~> G, debug: Boolean = false, steps: Int = 20)(implicit C: Comonad[G], S: MonoidK[S], F: Functor[S], pure: Pure[S]): Result[G] = {
+  def runM[G[_]](f: S ~> G, debug: Boolean = false, steps: Int = 20)(implicit C: Comonad[G], S: MonoidK[S], F: Functor[S], pure: Suspended[S]): Result[G] = {
     def loop(t: Tree[S], i: Int): Result[G] = if (i > 0) {
       if (debug) println(s"\nDEBUG:\n$t")
       t match {
