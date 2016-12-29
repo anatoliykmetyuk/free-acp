@@ -39,7 +39,7 @@ object LanguageT {
   type PartialCompiler[F[_]] = Compiler[F] => LanguageT ~> OptionK[F, ?]  // Compiles a part of a language to an Option; has a reference to the main Compiler for recursive compilation
   
   def compiler[F[_]](fs: PartialCompiler[F]*): Compiler[F] = new (LanguageT ~> F) { self =>
-    override def apply[A](x: LanguageT[A]): F[A] = fs.toIterator.flatMap(_(self)(x)).next  // TODO: `get`
+    override def apply[A](x: LanguageT[A]): F[A] = fs.toIterator.flatMap(_(self)(x)).next  // TODO: unsafe call to `next`
   }
 
   def defaultCompiler[F[_]: Suspended: MonoidK: Functor]: PartialCompiler[F] = mainCompiler => new (LanguageT ~> OptionK[F, ?]) {
