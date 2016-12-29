@@ -41,7 +41,7 @@ object FutureTest extends App with FutureImpl with SayElem with PromiseElem {
 
   val t1: Language = a * c * d ++ b * e * f
   
-  val task = Future { t1.runM(compiler[Future](defaultCompiler[Future], sayCompiler, promiseCompiler), debug = true) }
+  val task = Future { t1.runM(compiler[Future](defaultCompiler, sayCompiler, promiseCompiler), debug = true) }
   pb.success(ε)
 
   Await.result(task, Duration.Inf)
