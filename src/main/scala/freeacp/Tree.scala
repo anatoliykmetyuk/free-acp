@@ -52,7 +52,7 @@ trait Tree[S[_]] {
   }
 
   // See Cats' Free's `runM`
-  def runM[G[_]](f: S[Tree[S]] => G[Tree[S]], debug: Boolean = false, steps: Int = 20)(implicit C: Comonad[G], S: MonoidK[S], F: Functor[S], pure: Pure[S]): Result[G] = {
+  def runM[G[_]](f: S ~> G, debug: Boolean = false, steps: Int = 20)(implicit C: Comonad[G], S: MonoidK[S], F: Functor[S], pure: Pure[S]): Result[G] = {
     def loop(t: Tree[S], i: Int): Result[G] = if (i > 0) {
       if (debug) println(s"\nDEBUG:\n$t")
       t match {

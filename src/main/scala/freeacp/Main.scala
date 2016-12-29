@@ -95,15 +95,16 @@ object FreeAcp extends App {
     override def apply[A](x: () => A): TalkerT[A] = PureTalker(x)
   }
 
-  def compiler[A]: TalkerT[A] => Eval[A] = _ match {
-    case Say(s: String) => Eval.always { println(s); Success[TalkerT]().asInstanceOf[A] }
+  val compiler: TalkerT ~> Eval = new (TalkerT ~> Eval) {
+    override def apply[A](x: TalkerT[A]): Eval[A] = x match {
+      case Say(s: String) => Eval.always { println(s); Success[TalkerT]().asInstanceOf[A] }
 
-    case CombineTalker(t1, t2) => compiler(t2)
-    case MapTalker(t1, f) => Functor[Eval].map(compiler(t1))(f)
-    case EmptyTalker => Eval.always { Success[TalkerT]().asInstanceOf[A] }
-    case PureTalker(x) => Eval.always(x())
+      case CombineTalker(t1, t2) => compiler(t2)
+      case MapTalker(t1, f) => Functor[Eval].map(compiler(t1))(f)
+      case EmptyTalker => Eval.always { Success[TalkerT]().asInstanceOf[A] }
+      case PureTalker(x) => Eval.always(x())
+    }
   }
 
   program.runM(compiler, false)
-
 }
