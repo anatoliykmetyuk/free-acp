@@ -51,7 +51,16 @@ trait Tree[S[_]] {
         case _: Success[S] => Success[G]()
         case _: Failure[S] => Failure[G]()
         case t =>
-          def resumption = resume.apply(t).toIterator.map((f.apply[Tree[S]] _) andThen G.extract).find(!_.isInstanceOf[Failure[S]]).getOrElse(Failure[S]())
+          def resumption = {
+            @annotation.tailrec def rewriteLoop(x: Tree[S]): Tree[S] =
+              if (rewrite.isDefinedAt(x)) rewriteLoop(rewrite apply x) else x
+
+            resume.apply(t)
+              .sortBy(_.##).toIterator
+              .map((f.apply[Tree[S]] _) andThen G.extract andThen rewriteLoop)
+              .find(!_.isInstanceOf[Failure[S]])
+              .getOrElse(Failure[S]())
+          }
           loop ({ if (!resume.isDefinedAt(t)) rewrite.apply(t) else resumption }, i - 1)
       }
     } else throw new StackOverflowError("Too many execution steps!")

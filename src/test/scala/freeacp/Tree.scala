@@ -2,10 +2,8 @@ package freeacp
 
 import cats.{Eval, Comonad}
 
-import org.scalacheck.Properties
+import org.scalacheck.{Properties, Test, Arbitrary, Gen}
 import org.scalacheck.Prop.forAll
-import org.scalacheck.Arbitrary
-import org.scalacheck.Gen
 import org.scalacheck.Gen._
 
 import scala.concurrent.Future

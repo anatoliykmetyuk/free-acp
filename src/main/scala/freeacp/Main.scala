@@ -9,17 +9,23 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import LanguageT._
 
 object Main extends App {
-  val x = Sequence(atom { throw new RuntimeException })
-  val y = atom { println("Success!")        }
+  def a1 = atom { () }
+  def a0 = atom { throw new RuntimeException }
 
-  val t1 = x + y
-  val t2 = y + x
+  val x = atom { () }
+  val y = Sequence[LanguageT](Sequence[LanguageT](Choice[LanguageT](a1) * Sequence[LanguageT]() * ε * Choice[LanguageT](a1) * a1 * a1 * a1 * Choice[LanguageT](Choice[LanguageT]()) * Sequence[LanguageT]() * Sequence[LanguageT](Choice[LanguageT]())) * ε * Sequence[LanguageT](a1 * ε * ε))
+  val z = δ
+
+  val t1 = (x + y) + z
+  val t2 = x + (y + z)
 
   println("T1")
-  t1.runM(compiler[Eval](defaultCompiler), true)
+  val r1 = t1.runM(compiler[Eval](defaultCompiler), false)
+  println(r1)
 
   println("\n\nT2")
-  t2.runM(compiler[Eval](defaultCompiler), true)
+  val r2 = t2.runM(compiler[Eval](defaultCompiler), false)
+  println(r2)
 }
 
 object EvalTest extends App with SayElem {
