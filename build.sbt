@@ -27,6 +27,8 @@ lazy val commonSettings = Seq(
       "-Xlint",
       "-Ywarn-dead-code",
       "-Xfuture")
+
+, testOptions in Test += Tests.Argument(TestFrameworks.ScalaCheck, "-minSuccessfulTests", "10000", "-workers", "10", "-verbosity", "1")
 )
 
 lazy val root = (project in file("."))
