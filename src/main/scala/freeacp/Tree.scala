@@ -6,10 +6,10 @@ import cats.instances.list._
 trait Tree[S[_]] {
   def terminal(t: Tree[S]): Boolean = t.isInstanceOf[Success[S]] || t.isInstanceOf[Failure[S]]
 
-  def rewrite(implicit F: Functor[S], S: MonoidK[S], pure: Suspended[S]): PartialFunction[Tree[S], Tree[S]] = _ match {
+  def rewrite(implicit S: Suspended[S], F: Functor[S]): PartialFunction[Tree[S], Tree[S]] = _ match {
     // Sequence
     case Sequence(xs) if xs.contains(Loop()) =>
-      def seq: Tree[S] = Sequence( xs.filter(_ != Loop()) :+ Suspend( pure(() => seq) ) )
+      def seq: Tree[S] = Sequence( xs.filter(_ != Loop()) :+ Suspend(S.suspend { seq }) )
       seq
     case Sequence(Nil             ) => Success()
     case Sequence(Sequence(a) :: x) => Sequence(a ++ x)
@@ -28,37 +28,31 @@ trait Tree[S[_]] {
     })
   }
 
-  def resume(implicit S: MonoidK[S], F: Functor[S]): PartialFunction[Tree[S], S[Tree[S]]] = _ match {
+  def resume(implicit F: Functor[S]): PartialFunction[ Tree[S], List[S[Tree[S]]] ] = _ match {
     // Atom
-    case Suspend(r: S[Tree[S]]) => r
+    case Suspend(r: S[Tree[S]]) => List(r)
     
     // Sequence
-    case Sequence(Suspend(r: S[Tree[S]]) :: x) => F.map(r) { rs => Sequence(rs :: x) }
+    case Sequence(Suspend(r: S[Tree[S]]) :: x) => List( F.map(r) { rs => Sequence(rs :: x) } )
 
     // Choice
-    case Choice(x @ _ :: _) if x.forall(resume.isDefinedAt) => Foldable[List].combineAll(x.map(resume))(S.algebra[Tree[S]])
+    case Choice(x @ _ :: _) if x.forall(resume.isDefinedAt) => x.flatMap(resume) // Foldable[List].combineAll(x.map(resume))(S.monoidK.algebra[Tree[S]])
   }
 
-  def run(debug: Boolean = false)(implicit C: Comonad[S], S: MonoidK[S], pure: Suspended[S]): Result[S] = {
-    @annotation.tailrec
-    def loop(t: Tree[S]): Result[S] = {
-      if (debug) println(s"\nDEBUG:\n$t")
-      t match {
-        case r: Result[S] => r
-        case t: Tree  [S] => loop(if (rewrite.isDefinedAt(t)) rewrite.apply(t) else C.extract(resume.apply(t)))
-      }
-    }
-    loop(this)
-  }
+  def run(debug: Boolean = false)(implicit C: Comonad[S], S: Suspended[S], F: Functor[S]): Result[S] =
+    runM(new (S ~> S) { override def apply[A](x: S[A]): S[A] = x }, debug)
 
   // See Cats' Free's `runM`
-  def runM[G[_]](f: S ~> G, debug: Boolean = false, steps: Int = 1000)(implicit C: Comonad[G], S: MonoidK[S], F: Functor[S], pure: Suspended[S]): Result[G] = {
+  def runM[G[_]](f: S ~> G, debug: Boolean = false, steps: Int = 1000)(implicit G: Comonad[G], F: Functor[S], S: Suspended[S]): Result[G] = {
+    @annotation.tailrec
     def loop(t: Tree[S], i: Int): Result[G] = if (i > 0) {
       if (debug) println(s"\nDEBUG:\n$t")
       t match {
         case _: Success[S] => Success[G]()
         case _: Failure[S] => Failure[G]()
-        case t => loop ({ if (!resume.isDefinedAt(t)) rewrite.apply(t) else C.extract( f(resume apply t) ) }, i - 1)
+        case t =>
+          def resumption = resume.apply(t).toIterator.map((f.apply[Tree[S]] _) andThen G.extract).find(!_.isInstanceOf[Failure[S]]).getOrElse(Failure[S]())
+          loop ({ if (!resume.isDefinedAt(t)) rewrite.apply(t) else resumption }, i - 1)
       }
     } else throw new StackOverflowError("Too many execution steps!")
     loop(this, steps)
@@ -70,8 +64,8 @@ trait Tree[S[_]] {
 
 
 case class Suspend [S[_]](a : S[Tree[S]]   ) extends Tree[S] { override def toString = s"suspend"                 }
-case class Sequence[S[_]](ts: List[Tree[S]]) extends Tree[S] { override def toString = s"(${ts.mkString(" * ")})" }
-case class Choice  [S[_]](ts: List[Tree[S]]) extends Tree[S] { override def toString = s"(${ts.mkString(" + ")})" }
+case class Sequence[S[_]](ts: List[Tree[S]]) extends Tree[S] { override def toString = s"[*](${ts.mkString(" * ")})" }
+case class Choice  [S[_]](ts: List[Tree[S]]) extends Tree[S] { override def toString = s"[+](${ts.mkString(" + ")})" }
 
 trait Result[S[_]] extends Tree[S]
 case class Success[S[_]]() extends Result[S] { override def toString = "1" }

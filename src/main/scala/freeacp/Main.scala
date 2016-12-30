@@ -8,7 +8,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import LanguageT._
 
-object Main extends App with EvalImpl {
+object Main extends App {
   val x = Sequence(atom { throw new RuntimeException })
   val y = atom { println("Success!")        }
 
@@ -22,7 +22,7 @@ object Main extends App with EvalImpl {
   t2.runM(compiler[Eval](defaultCompiler), true)
 }
 
-object EvalTest extends App with EvalImpl with SayElem {
+object EvalTest extends App with SayElem {
   val a = say("Hello", "a")
   val b = say("World", "b")
   val c = say("!", "c")
@@ -59,7 +59,7 @@ object FutureTest extends App with FutureImpl with SayElem with PromiseElem {
   Await.result(task, Duration.Inf)
 }
 
-object FreeAcp extends App with EvalImpl with SayElem {
+object FreeAcp extends App with SayElem {
   val program = atom { println("Hello") } * atom { println("World" ) } * say("Foo")
   program.runM(compiler[Eval](defaultCompiler, sayCompiler), false)
 }

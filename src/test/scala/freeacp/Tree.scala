@@ -1,6 +1,6 @@
 package freeacp
 
-import cats.Eval
+import cats.{Eval, Comonad}
 
 import org.scalacheck.Properties
 import org.scalacheck.Prop.forAll
@@ -8,10 +8,12 @@ import org.scalacheck.Arbitrary
 import org.scalacheck.Gen
 import org.scalacheck.Gen._
 
+import scala.concurrent.Future
 
-object TreeProps extends Properties("Tree") with TreeGens {
-  import LanguageT._
+import LanguageT._
+import FutureImpl._
 
+abstract class TreeLaws[S[_]](name: String)(implicit val S: Suspended[S], val C: Comonad[S]) extends Properties(name) with TreeGens[S] {
   implicit def arbTree = Arbitrary(tree)
 
   property("Runnability") = forAll { t: Language => run(t).isInstanceOf[Result[LanguageT]] }
@@ -34,11 +36,17 @@ object TreeProps extends Properties("Tree") with TreeGens {
   property("ε * x == x") = forAll { x: Language => ε * x <-> x }
 }
 
-trait TreeGens extends EvalImpl {
+object EvalLaws   extends TreeLaws[Eval  ]("Eval laws")
+object FutureLaws extends TreeLaws[Future]("Future laws")
+
+trait TreeGens[S[_]] {
   import LanguageT._
 
+  implicit val S: Suspended[S]
+  implicit val C: Comonad[S]
+
   def run(t: Language) =
-    try t.runM(compiler[Eval](defaultCompiler))
+    try t.runM(compiler[S](defaultCompiler))
     catch { case t: Throwable => t.printStackTrace; throw t }
 
   implicit class Equivalence(x: Language) {
@@ -63,5 +71,3 @@ trait TreeGens extends EvalImpl {
     root     <- oneOf(Choice[LanguageT](operands), Sequence[LanguageT](operands))
   } yield root }
 }
-
-object TreeGens extends TreeGens

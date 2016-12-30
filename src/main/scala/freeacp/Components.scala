@@ -6,34 +6,16 @@ import scala.concurrent._
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
-
-trait EvalImpl {
-  implicit val suspendedEval: Suspended[Eval] = new ( (() => ?) ~> Eval ) {
-    override def apply[A](x: () => A): Eval[A] = Eval.always(x())
-  }
-
-  implicit val monoidKEval: MonoidK[Eval] = new MonoidK[Eval] {
-    override def combineK[A](e1: Eval[A], e2: Eval[A]): Eval[A] = e2
-    override def empty[A] = Eval.always[Nothing] { throw new NotImplementedError }
-  }
-}
-
 trait FutureImpl {
-  implicit val suspendedFuture: Suspended[Future] = new ( (() => ?) ~> Future ) {
-    override def apply[A](x: () => A): Future[A] = Future { x() }
-  }
-
-  implicit val monoidKFuture: MonoidK[Future] = new MonoidK[Future] {
-    override def combineK[A](e1: Future[A], e2: Future[A]): Future[A] = Future.firstCompletedOf(List(e1, e2))
-    override def empty[A] = Future.never
-  }
-
-  implicit val comonadFuture: Comonad[Future] = new Comonad[Future] {
+  implicit def comonadFuture: Comonad[Future] = new Comonad[Future] {
     override def extract[A](x: Future[A]): A = Await.result(x, Duration.Inf)
-    override def coflatMap[A, B](fa: Future[A])(f: Future[A] => B): Future[B] = map(coflatten(fa))(f)
-    override def map[A, B](fa: Future[A])(f: A => B): Future[B] = fa.map(f)
+    override def map[A, B](x: Future[A])(f: A => B): Future[B] = x.map(f)
+    override def coflatMap[A, B](x: Future[A])(f: Future[A] => B): Future[B] = map(coflatten(x))(f)
   }
 }
+
+object FutureImpl extends FutureImpl
+
 
 trait SayElem {
   import LanguageT._
