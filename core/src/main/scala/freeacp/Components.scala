@@ -6,6 +6,8 @@ import scala.concurrent._
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
+import LanguageT._
+
 trait FutureImpl {
   implicit def comonadFuture: Comonad[Future] = new Comonad[Future] {
     override def extract[A](x: Future[A]): A = Await.result(x, Duration.Inf)
@@ -18,8 +20,6 @@ object FutureImpl extends FutureImpl
 
 
 trait SayElem {
-  import LanguageT._
-
   case class Say(s: String) extends LanguageT[Result[LanguageT]]
   def say(s: String, name: String = "suspend"): Tree[LanguageT] = new Suspend[LanguageT](Say(s)) { override def toString = name }
 
@@ -31,8 +31,6 @@ trait SayElem {
 }
 
 trait PromiseElem {
-  import LanguageT._
-
   case class PromiseContainer(p: Promise[Result[LanguageT]]) extends LanguageT[Result[LanguageT]]
   def promise(p: Promise[Result[LanguageT]], name: String = "promise") = new Suspend[LanguageT](PromiseContainer(p)) { override def toString = name }
 
@@ -40,5 +38,16 @@ trait PromiseElem {
     override def apply[A](s: LanguageT[A]): Option[Future[A]] = ({
       case PromiseContainer(p) => p.future
     }: PartialFunction[LanguageT[A], Future[A]]).lift.apply(s)
+  }
+}
+
+trait CallElem {
+  case class CallContainer(t: () => Language) extends LanguageT[Tree[LanguageT]]
+  def call(t: => Language, name: String = "call") = new Suspend[LanguageT](CallContainer { () => t }) { override def toString = name }
+
+  def callCompiler[F[_]: Suspended]: PartialCompiler[F] = _ => new (LanguageT ~> OptionK[F, ?]) {
+    override def apply[A](s: LanguageT[A]): Option[F[A]] = ({
+      case CallContainer(t) => implicitly[Suspended[F]].suspend(t())
+    }: PartialFunction[LanguageT[A], F[A]]).lift.apply(s)
   }
 }

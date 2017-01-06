@@ -1,16 +1,17 @@
-val ScalaVer = "2.12.1"
+val ScalaVer    = "2.12.1"
+val ThisVersion = "0.1.0"
 
 val Cats          = "0.8.1"
 val Shapeless     = "2.3.2"
 val ScalaCheck    = "1.13.4"
 val KindProjector = "0.9.3"
 
+val ScalaSwing = "2.0.0-M2"
+
 val ScalacheckMinTests = "100000"
 
 lazy val commonSettings = Seq(
-  name    := "free-acp"
-, version := "0.1.0"
-, scalaVersion := ScalaVer
+  scalaVersion := ScalaVer
 , libraryDependencies ++= Seq(
     "org.typelevel"  %% "cats"       % Cats
   , "com.chuusai"    %% "shapeless"  % Shapeless
@@ -34,7 +35,19 @@ lazy val commonSettings = Seq(
 )
 
 lazy val root = (project in file("."))
+  .aggregate(core, lookupframe)
+
+lazy val core = (project in file("core"))
   .settings(commonSettings)
   .settings(
-    initialCommands := "import freeacp._; import Main._"
+    name    := "free-acp"
+  , version := "0.1.0"
+  , initialCommands := "import freeacp._; import Main._"
+  )
+
+lazy val lookupframe = (project in file("lookupframe"))
+  .dependsOn(core)
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies += "org.scala-lang.modules" %% "scala-swing" % ScalaSwing
   )

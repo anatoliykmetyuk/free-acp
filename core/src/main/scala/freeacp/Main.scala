@@ -16,16 +16,13 @@ object Main extends App {
   val y = δ
   val z = a1 * a0
 
-  val t1 = (x + y) + z
+  val t1 = ω * x
   val t2 = x + (y + z)
 
   println("T1")
   val r1 = t1.runM(compiler[Eval](defaultCompiler), true)
   println(r1)
 
-  println("\n\nT2")
-  val r2 = t2.runM(compiler[Eval](defaultCompiler), true)
-  println(r2)
 }
 
 object EvalTest extends App with SayElem {
@@ -57,7 +54,7 @@ object FutureTest extends App with FutureImpl with SayElem with PromiseElem {
   val e = say    ("Something" , "e")
   val f = say    ("Else"      , "f")
 
-  val t1: Language = a * c * d + b * e * f
+  val t1: Language = ω * c // a * c * d + b * e * f
   
   val task = Future { t1.runM(compiler[Future](defaultCompiler, sayCompiler, promiseCompiler), debug = true) }
   pb.success(ε)
