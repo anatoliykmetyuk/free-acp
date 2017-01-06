@@ -12,19 +12,19 @@ object Main extends App {
   def a1 = atom { () }
   def a0 = atom { throw new RuntimeException }
 
-  val x = atom { () }
-  val y = Sequence[LanguageT](Sequence[LanguageT](Choice[LanguageT](a1) * Sequence[LanguageT]() * ε * Choice[LanguageT](a1) * a1 * a1 * a1 * Choice[LanguageT](Choice[LanguageT]()) * Sequence[LanguageT]() * Sequence[LanguageT](Choice[LanguageT]())) * ε * Sequence[LanguageT](a1 * ε * ε))
-  val z = δ
+  val x = a1
+  val y = δ
+  val z = a1 * a0
 
   val t1 = (x + y) + z
   val t2 = x + (y + z)
 
   println("T1")
-  val r1 = t1.runM(compiler[Eval](defaultCompiler), false)
+  val r1 = t1.runM(compiler[Eval](defaultCompiler), true)
   println(r1)
 
   println("\n\nT2")
-  val r2 = t2.runM(compiler[Eval](defaultCompiler), false)
+  val r2 = t2.runM(compiler[Eval](defaultCompiler), true)
   println(r2)
 }
 

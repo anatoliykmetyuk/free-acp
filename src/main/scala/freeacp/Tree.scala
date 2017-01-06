@@ -56,7 +56,6 @@ trait Tree[S[_]] {
               if (rewrite.isDefinedAt(x)) rewriteLoop(rewrite apply x) else x
 
             resume.apply(t)
-              .sortBy(_.##).toIterator
               .map((f.apply[Tree[S]] _) andThen G.extract andThen rewriteLoop)
               .find(!_.isInstanceOf[Failure[S]])
               .getOrElse(Failure[S]())
