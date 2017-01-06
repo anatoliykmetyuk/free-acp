@@ -9,7 +9,7 @@ trait Tree[S[_]] {
   def rewrite(implicit S: Suspended[S], F: Functor[S]): PartialFunction[Tree[S], Tree[S]] = _ match {
     // Sequence
     case Sequence(xs) if xs.contains(Loop()) =>
-      def seq: Tree[S] = Sequence( xs.filter(_ != Loop()) :+ Suspend(S.suspend { seq }) )
+      def seq: Tree[S] = Sequence( xs.filter(_ != Loop()) :+ new Suspend(S.suspend { seq }) { override def toString = "loopContinuation" } )
       seq
     case Sequence(Nil             ) => Success()
     case Sequence(Sequence(a) :: x) => Sequence(a ++ x)

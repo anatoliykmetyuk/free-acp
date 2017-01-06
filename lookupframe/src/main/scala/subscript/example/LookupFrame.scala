@@ -38,7 +38,7 @@ class LookupFrameApplication extends SimpleSubscriptApplication {
   def sleep(time: Long) = Thread.sleep(time)
   
   def liveScript     = ω * call(searchSequence) * atom { println("Hello World!") }
-  def searchSequence = button(searchButton)
+  def searchSequence = button(searchButton) + key(Key.Enter)
 
   // implicit script vkey(??k: Key.Value) = vkey2: top, ??k
 
