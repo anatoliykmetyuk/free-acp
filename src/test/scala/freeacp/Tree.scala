@@ -2,7 +2,7 @@ package freeacp
 
 import cats.{Eval, Comonad}
 
-import org.scalacheck.{Properties, Test, Arbitrary, Gen}
+import org.scalacheck.{Properties, Test, Arbitrary, Gen, Shrink}
 import org.scalacheck.Prop.forAll
 import org.scalacheck.Gen._
 
@@ -68,4 +68,19 @@ trait TreeGens[S[_]] {
     operands <- listOfN(s, g)
     root     <- oneOf(Choice[LanguageT](operands), Sequence[LanguageT](operands))
   } yield root }
+
+  import Stream.{empty, cons}
+  import Shrink.shrink
+  implicit def shrinkTree: Shrink[Language] = Shrink[Language] {
+    case Sequence(Nil) => Stream(ε)
+    case Choice  (Nil) => Stream(δ)
+
+    case Sequence(x :: Nil) => shrink(x)
+    case Choice  (x :: Nil) => shrink(x)
+
+    case Sequence(xs)  => shrink(xs).map(Sequence(_: _*))
+    case Choice  (xs)  => shrink(xs).map(Choice  (_: _*))
+
+    case x => empty
+  }
 }

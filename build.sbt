@@ -5,6 +5,8 @@ val Shapeless     = "2.3.2"
 val ScalaCheck    = "1.13.4"
 val KindProjector = "0.9.3"
 
+val ScalacheckMinTests = "100000"
+
 lazy val commonSettings = Seq(
   name    := "free-acp"
 , version := "0.1.0"
@@ -28,7 +30,7 @@ lazy val commonSettings = Seq(
       "-Ywarn-dead-code",
       "-Xfuture")
 
-, testOptions in Test += Tests.Argument(TestFrameworks.ScalaCheck, "-minSuccessfulTests", "10000", "-workers", "10", "-verbosity", "1")
+, testOptions in Test += Tests.Argument(TestFrameworks.ScalaCheck, "-minSuccessfulTests", ScalacheckMinTests, "-workers", "10", "-verbosity", "1")
 )
 
 lazy val root = (project in file("."))
