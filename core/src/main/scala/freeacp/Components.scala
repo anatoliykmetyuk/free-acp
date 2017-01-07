@@ -29,9 +29,6 @@ trait FutureImpl {
 
       Future.firstCompletedOf(List(x1, x2))
     }}
-
-    // (t1, t2) match { case (t1: Future[Tree[_]], t2: Future[Tree[_]]) =>
-    // }
   }
 }
 
@@ -42,8 +39,6 @@ trait EvalImpl {
     override def empty[A]: Eval[A] = Eval.always { ??? }
     override def combineK[A](t1: Eval[A], t2: Eval[A]): Eval[A] =
       t1 match { case t1: Eval[Tree[a]] => t2 match { case t2: Eval[Tree[a]] => t2.map(_.step) }}
-
-    // (t1, t2) match { case (t1: Eval[Tree[a]], t2: Eval[Tree[a]]) => t2.step }
   }
 }
 
@@ -55,7 +50,7 @@ trait SayElem {
 
   def sayCompiler[F[_]: Suspended]: PartialCompiler[F] = _ => new (LanguageT ~> OptionK[F, ?]) {
     override def apply[A](s: LanguageT[A]): Option[F[A]] = ({
-      case Say(s) => implicitly[Suspended[F]].apply { () => println(s); ε.asInstanceOf[A] }
+      case Say(s) => Suspended[F].suspend { println(s); ε.asInstanceOf[A] }
     }: PartialFunction[LanguageT[A], F[A]]).lift.apply(s)
   }
 }
@@ -68,16 +63,5 @@ trait PromiseElem {
     override def apply[A](s: LanguageT[A]): Option[Future[A]] = ({
       case PromiseContainer(p) => p.future
     }: PartialFunction[LanguageT[A], Future[A]]).lift.apply(s)
-  }
-}
-
-trait CallElem {
-  case class CallContainer(t: () => Language) extends LanguageT[Tree[LanguageT]]
-  def call(t: => Language, name: String = "call") = new Suspend[LanguageT](CallContainer { () => t }) { override def toString = name }
-
-  def callCompiler[F[_]: Suspended]: PartialCompiler[F] = _ => new (LanguageT ~> OptionK[F, ?]) {
-    override def apply[A](s: LanguageT[A]): Option[F[A]] = ({
-      case CallContainer(t) => implicitly[Suspended[F]].suspend(t())
-    }: PartialFunction[LanguageT[A], F[A]]).lift.apply(s)
   }
 }

@@ -15,8 +15,8 @@ object LookupFrame extends LookupFrameApplication
 
 class LookupFrameApplication extends SimpleSubscriptApplication {
   
-  val outputTA     = new TextArea        {editable      = false}
-  val searchButton = new Button("Go")    {enabled       = true}
+  val outputTA     = new TextArea        {editable      = true  }
+  val searchButton = new Button("Go")    {enabled       = false }
   val searchLabel  = new Label("Search") {preferredSize = new Dimension(45,26)}
   val searchTF     = new TextField       {preferredSize = new Dimension(100, 26)}
   
@@ -37,23 +37,13 @@ class LookupFrameApplication extends SimpleSubscriptApplication {
   def confirmExit: Boolean = Dialog.showConfirmation(null, "Are you sure?", "About to exit")==Dialog.Result.Yes
   def sleep(time: Long) = Thread.sleep(time)
   
+  
   def liveScript     = ω * call(searchSequence)
   
-  def searchSequence = searchCommand * showSearchingText// * searchInDatabase * showSearchResults
-  def searchCommand  = button(searchButton) + key(Key.Enter)
+  def searchSequence = call(searchCommand) * call(showSearchingText) * call(searchInDatabase) * call(showSearchResults)
+  def searchCommand  = key(Key.Enter) + button(searchButton)
 
-  def showSearchingText = gui { outputTA.text = "Searching: "+searchTF.text }
-
-  // implicit script vkey(??k: Key.Value) = vkey2: top, ??k
-
-  // script..
-
-  //   liveScript        = ... searchSequence
-
-  //   searchSequence    = searchCommand showSearchingText searchInDatabase showSearchResults
-  //   searchCommand     = searchButton + Key.Enter
-
-  //   showSearchingText = @gui: let outputTA.text = "Searching: "+searchTF.text
-  //   showSearchResults = @gui: let outputTA.text = "Found: "+here.index+" items"
-  //   searchInDatabase  = do* sleep(2000) // simulate a time consuming action
+  def showSearchingText = gui  { outputTA.text = "Searching: "+searchTF.text   }
+  def showSearchResults = gui  { outputTA.text = "Found: "+scala.util.Random.nextInt(100)+" items" }
+  def searchInDatabase  = atom { sleep(2000) } // simulate a time consuming action
 }

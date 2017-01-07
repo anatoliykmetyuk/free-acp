@@ -8,7 +8,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import LanguageT._
 
-object Main extends App with EvalImpl with FutureImpl {
+object Main extends App with EvalImpl with FutureImpl with SayElem {
   def a1 = atom { () }
   def a0 = atom { throw new RuntimeException }
 
@@ -16,15 +16,15 @@ object Main extends App with EvalImpl with FutureImpl {
   val y = (Choice[LanguageT](Nil) + Choice[LanguageT](Nil) + Choice[LanguageT](List(Choice[LanguageT](Nil))) + Sequence(List(Choice[LanguageT](Nil))) + a1 + Choice[LanguageT](Nil) + Sequence(List(a0)) + a0 + δ)
   val z = (Sequence[LanguageT](Nil) * Sequence[LanguageT](Nil) * a1 * Sequence[LanguageT](Nil) * Sequence(List(a0)) * Choice(List(ε)))
 
-  val t1 = (x + y) + z
-  val t2 = x + (y + z)
+  val t1 = call(a0 * say("Foo")) + call(a1 * say("Bar"))
+  val t2 = call(a1)
 
   println("T1")
-  val r1 = t1.runM(compiler[Future](defaultCompiler), true)
+  val r1 = t1.runM(compiler[Future](defaultCompiler, sayCompiler), true)
   println(r1)
 
   println("T2")
-  val r2 = t2.runM(compiler[Future](defaultCompiler), true)
+  val r2 = t2.runM(compiler[Future](defaultCompiler, sayCompiler), true)
   println(r2)
 
 }

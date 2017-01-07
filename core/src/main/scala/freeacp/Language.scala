@@ -12,7 +12,8 @@ case class  SuspendedLanguage[A](x: () => A) extends LanguageT[A]
 object LanguageT {
   type Language = Tree[LanguageT]
 
-  def atom(a: => Unit): Language = Suspend[LanguageT](Atom( () => a ))
+  def atom(a: => Unit    ): Language = Suspend[LanguageT](Atom( () => a ))
+  def call(t: => Language): Language = Call   [LanguageT] { () => t }
 
   def ε = Success[LanguageT]()
   def δ = Failure[LanguageT]()
