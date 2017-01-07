@@ -4,9 +4,12 @@ import cats._
 import cats.instances.list._
 
 trait Tree[S[_]] {
+  implicit val S: Suspended[S]
+  implicit val F: Functor[S]
+
   def terminal(t: Tree[S]): Boolean = t.isInstanceOf[Success[S]] || t.isInstanceOf[Failure[S]]
 
-  def rewrite(implicit S: Suspended[S], F: Functor[S]): PartialFunction[Tree[S], Tree[S]] = _ match {
+  def rewrite: PartialFunction[Tree[S], Tree[S]] = _ match {
     // Sequence
     case Sequence(xs) if xs.contains(Loop()) =>
       def seq: Tree[S] = Sequence( xs.filter(_ != Loop()) :+ new Suspend(S.suspend { seq }) { override def toString = "loopContinuation" } )
@@ -28,7 +31,7 @@ trait Tree[S[_]] {
     })
   }
 
-  def resume(implicit F: Functor[S]): PartialFunction[ Tree[S], List[S[Tree[S]]] ] = _ match {
+  def resume: PartialFunction[ Tree[S], List[S[Tree[S]]] ] = _ match {
     // Atom
     case Suspend(r: S[Tree[S]]) => List(r)
     
@@ -39,11 +42,17 @@ trait Tree[S[_]] {
     case Choice(x @ _ :: _) if x.forall(resume.isDefinedAt) => x.flatMap(resume) // Foldable[List].combineAll(x.map(resume))(S.monoidK.algebra[Tree[S]])
   }
 
-  def run(debug: Boolean = false)(implicit C: Comonad[S], S: Suspended[S], F: Functor[S]): Result[S] =
+  def step: Tree[S] = {
+    @annotation.tailrec def rewriteLoop(x: Tree[S]): Tree[S] =
+      if (rewrite.isDefinedAt(x)) rewriteLoop(rewrite apply x) else x
+    rewriteLoop(this)
+  }
+
+  def run(debug: Boolean = false)(implicit C: Comonad[S], SG: MonoidK[S]): Result[S] =
     runM(new (S ~> S) { override def apply[A](x: S[A]): S[A] = x }, debug)
 
   // See Cats' Free's `runM`
-  def runM[G[_]](f: S ~> G, debug: Boolean = false, steps: Int = 1000)(implicit G: Comonad[G], F: Functor[S], S: Suspended[S]): Result[G] = {
+  def runM[G[_]: Suspended, Functor](f: S ~> G, debug: Boolean = false, steps: Int = 1000)(implicit G: Comonad[G], SG: MonoidK[G]): Result[G] = {
     @annotation.tailrec
     def loop(t: Tree[S], i: Int): Result[G] = if (i > 0) {
       if (debug) println(s"\nDEBUG:\n$t")
@@ -51,41 +60,39 @@ trait Tree[S[_]] {
         case _: Success[S] => Success[G]()
         case _: Failure[S] => Failure[G]()
         case t =>
-          def resumption = {
-            @annotation.tailrec def rewriteLoop(x: Tree[S]): Tree[S] =
-              if (rewrite.isDefinedAt(x)) rewriteLoop(rewrite apply x) else x
+          // def resumption = {
 
-            resume.apply(t)
-              .map((f.apply[Tree[S]] _) andThen G.extract andThen rewriteLoop)
-              .find(!_.isInstanceOf[Failure[S]])
-              .getOrElse(Failure[S]())
-          }
-          loop ({ if (!resume.isDefinedAt(t)) rewrite.apply(t) else resumption }, i - 1)
+            
+          //   // resume.apply(t)
+          //   //   .map((f.apply[Tree[S]] _) andThen G.extract andThen rewriteLoop)
+          //   //   .find(!_.isInstanceOf[Failure[S]])
+          //   //   .getOrElse(Failure[S]())
+          // }
+          loop ({ if (!resume.isDefinedAt(t)) rewrite.apply(t) else Comonad[G].extract { Traverse[List].combineAll(resume.apply(t).map(f.apply[Tree[S]]))(SG.algebra[Tree[S]]) } }, i - 1)
       }
     } else throw new StackOverflowError("Too many execution steps!")
     loop(this, steps)
   }
 
-  def *(other: Tree[S]) = Sequence[S](this, other)
-  def +(other: Tree[S]) = Choice  [S](this, other)
+  def *(other: Tree[S]) = Sequence.apply[S](this, other)
+  def +(other: Tree[S]) = Choice  .apply[S](this, other)
 }
 
-
-case class Suspend [S[_]](a : S[Tree[S]]   ) extends Tree[S] { override def toString = s"suspend"                 }
-case class Sequence[S[_]](ts: List[Tree[S]]) extends Tree[S] { override def toString = s"[*](${ts.mkString(" * ")})" }
-case class Choice  [S[_]](ts: List[Tree[S]]) extends Tree[S] { override def toString = s"[+](${ts.mkString(" + ")})" }
+case class Suspend [S[_]](a : S[Tree[S]]   )(implicit val S: Suspended[S], val F: Functor[S]) extends Tree[S] { override def toString = s"suspend"                 }
+case class Sequence[S[_]](ts: List[Tree[S]])(implicit val S: Suspended[S], val F: Functor[S]) extends Tree[S] { override def toString = s"[*](${ts.mkString(" * ")})" }
+case class Choice  [S[_]](ts: List[Tree[S]])(implicit val S: Suspended[S], val F: Functor[S]) extends Tree[S] { override def toString = s"[+](${ts.mkString(" + ")})" }
 
 trait Result[S[_]] extends Tree[S]
-case class Success[S[_]]() extends Result[S] { override def toString = "1" }
-case class Failure[S[_]]() extends Result[S] { override def toString = "0" }
+case class Success[S[_]]()(implicit val S: Suspended[S], val F: Functor[S]) extends Result[S] { override def toString = "1" }
+case class Failure[S[_]]()(implicit val S: Suspended[S], val F: Functor[S]) extends Result[S] { override def toString = "0" }
 
-case class Loop[S[_]]() extends Tree[S] { override def toString = "..." }
+case class Loop[S[_]]()(implicit val S: Suspended[S], val F: Functor[S]) extends Tree[S] { override def toString = "..." }
 
 object Sequence {
-  def apply[S[_]](ts: Tree[S]*): Sequence[S] = Sequence[S](ts.toList)
+  def apply[S[_]](ts: Tree[S]*)(implicit S: Suspended[S], F: Functor[S]): Sequence[S] = Sequence[S](ts.toList)
 }
 
 object Choice {
-  def apply[S[_]](ts: Tree[S]*): Choice[S] = Choice[S](ts.toList)
+  def apply[S[_]](ts: Tree[S]*)(implicit S: Suspended[S], F: Functor[S]): Choice[S] = Choice[S](ts.toList)
 }
 

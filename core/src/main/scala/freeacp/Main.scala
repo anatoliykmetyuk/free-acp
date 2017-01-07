@@ -8,24 +8,28 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import LanguageT._
 
-object Main extends App {
+object Main extends App with EvalImpl with FutureImpl {
   def a1 = atom { () }
   def a0 = atom { throw new RuntimeException }
 
-  val x = a1
-  val y = δ
-  val z = a1 * a0
+  val x = a0
+  val y = (Choice[LanguageT](Nil) + Choice[LanguageT](Nil) + Choice[LanguageT](List(Choice[LanguageT](Nil))) + Sequence(List(Choice[LanguageT](Nil))) + a1 + Choice[LanguageT](Nil) + Sequence(List(a0)) + a0 + δ)
+  val z = (Sequence[LanguageT](Nil) * Sequence[LanguageT](Nil) * a1 * Sequence[LanguageT](Nil) * Sequence(List(a0)) * Choice(List(ε)))
 
-  val t1 = ω * x
+  val t1 = (x + y) + z
   val t2 = x + (y + z)
 
   println("T1")
-  val r1 = t1.runM(compiler[Eval](defaultCompiler), true)
+  val r1 = t1.runM(compiler[Future](defaultCompiler), true)
   println(r1)
+
+  println("T2")
+  val r2 = t2.runM(compiler[Future](defaultCompiler), true)
+  println(r2)
 
 }
 
-object EvalTest extends App with SayElem {
+object EvalTest extends App with SayElem with EvalImpl {
   val a = say("Hello", "a")
   val b = say("World", "b")
   val c = say("!", "c")
@@ -54,7 +58,7 @@ object FutureTest extends App with FutureImpl with SayElem with PromiseElem {
   val e = say    ("Something" , "e")
   val f = say    ("Else"      , "f")
 
-  val t1: Language = ω * c // a * c * d + b * e * f
+  val t1: Language = a * c * d + b * e * f
   
   val task = Future { t1.runM(compiler[Future](defaultCompiler, sayCompiler, promiseCompiler), debug = true) }
   pb.success(ε)
@@ -62,7 +66,7 @@ object FutureTest extends App with FutureImpl with SayElem with PromiseElem {
   Await.result(task, Duration.Inf)
 }
 
-object FreeAcp extends App with SayElem {
+object FreeAcp extends App with SayElem with EvalImpl {
   val program = atom { println("Hello") } * atom { println("World" ) } * say("Foo")
   program.runM(compiler[Eval](defaultCompiler, sayCompiler), false)
 }

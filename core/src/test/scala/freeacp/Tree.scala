@@ -1,6 +1,6 @@
 package freeacp
 
-import cats.{Eval, Comonad}
+import cats._
 
 import org.scalacheck.{Properties, Test, Arbitrary, Gen, Shrink}
 import org.scalacheck.Prop.forAll
@@ -12,6 +12,8 @@ import LanguageT._
 import FutureImpl._
 
 abstract class TreeLaws[S[_]](name: String)(implicit val S: Suspended[S], val C: Comonad[S]) extends Properties(name) with TreeGens[S] {
+  implicit val M: MonoidK[S]
+
   implicit def arbTree = Arbitrary(tree)
 
   property("Runnability") = forAll { t: Language => run(t).isInstanceOf[Result[LanguageT]] }
@@ -34,14 +36,15 @@ abstract class TreeLaws[S[_]](name: String)(implicit val S: Suspended[S], val C:
   property("ε * x == x") = forAll { x: Language => ε * x <-> x }
 }
 
-object EvalLaws   extends TreeLaws[Eval  ]("Eval laws")
-object FutureLaws extends TreeLaws[Future]("Future laws")
+object EvalLaws   extends TreeLaws[Eval  ]("Eval laws"  ) { override implicit val M: MonoidK[Eval  ] = EvalImpl  .evalMonoidK   }
+object FutureLaws extends TreeLaws[Future]("Future laws") { override implicit val M: MonoidK[Future] = FutureImpl.futureMonoidK }
 
 trait TreeGens[S[_]] {
   import LanguageT._
 
   implicit val S: Suspended[S]
   implicit val C: Comonad[S]
+  implicit val M: MonoidK[S]
 
   def run(t: Language) =
     try t.runM(compiler[S](defaultCompiler))

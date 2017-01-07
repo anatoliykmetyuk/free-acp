@@ -14,10 +14,40 @@ trait FutureImpl {
     override def map[A, B](x: Future[A])(f: A => B): Future[B] = x.map(f)
     override def coflatMap[A, B](x: Future[A])(f: Future[A] => B): Future[B] = map(coflatten(x))(f)
   }
+
+  implicit val futureMonoidK: MonoidK[Future] = new MonoidK[Future] {
+    override def empty[A] = Future.successful { LanguageT.δ.asInstanceOf[A] }
+    override def combineK[A](t1: Future[A], t2: Future[A]): Future[A] = t1 match { case t1: Future[Tree[a]] => t2 match { case t2: Future[Tree[a]] =>
+      def futureOrElse(f1: Future[Tree[a]], f2: Future[Tree[a]]): Future[Tree[a]] =
+        f1.flatMap { t => t.step match {
+          case _: Failure[_] => f2
+          case tx => Future.successful(tx)
+        }}
+
+      val x1 = futureOrElse(t1, t2)
+      val x2 = futureOrElse(t2, t1)
+
+      Future.firstCompletedOf(List(x1, x2))
+    }}
+
+    // (t1, t2) match { case (t1: Future[Tree[_]], t2: Future[Tree[_]]) =>
+    // }
+  }
 }
 
 object FutureImpl extends FutureImpl
 
+trait EvalImpl {
+  implicit val evalMonoidK: MonoidK[Eval] = new MonoidK[Eval] {
+    override def empty[A]: Eval[A] = Eval.always { ??? }
+    override def combineK[A](t1: Eval[A], t2: Eval[A]): Eval[A] =
+      t1 match { case t1: Eval[Tree[a]] => t2 match { case t2: Eval[Tree[a]] => t2.map(_.step) }}
+
+    // (t1, t2) match { case (t1: Eval[Tree[a]], t2: Eval[Tree[a]]) => t2.step }
+  }
+}
+
+object EvalImpl extends EvalImpl
 
 trait SayElem {
   case class Say(s: String) extends LanguageT[Result[LanguageT]]

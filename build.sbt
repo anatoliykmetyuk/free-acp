@@ -8,7 +8,7 @@ val KindProjector = "0.9.3"
 
 val ScalaSwing = "2.0.0-M2"
 
-val ScalacheckMinTests = "100000"
+val ScalacheckMinTests = "10000"
 
 lazy val commonSettings = Seq(
   scalaVersion := ScalaVer
