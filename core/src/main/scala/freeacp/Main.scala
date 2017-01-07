@@ -46,22 +46,20 @@ object EvalTest extends App with SayElem with EvalImpl {
   t5.runM(compiler[Eval](defaultCompiler, sayCompiler), true)
 }
 
-object FutureTest extends App with FutureImpl with SayElem with PromiseElem {
-  val pa = Promise[Result[LanguageT]]()
-  val pb = Promise[Result[LanguageT]]
-  
-  val a = promise(pa          , "a")
-  val b = promise(pb          , "b")
+object FutureTest extends App with FutureImpl with SayElem with ControlledElem {  
+  val (ta, a) = controlled("a")
+  val (tb, b) = controlled("b")
 
-  val c = say    ("Hello"     , "c")
-  val d = say    ("World"     , "d")
-  val e = say    ("Something" , "e")
-  val f = say    ("Else"      , "f")
+  val c = say("Hello"     , "c")
+  val d = say("World"     , "d")
+  val e = say("Something" , "e")
+  val f = say("Else"      , "f")
 
   val t1: Language = a * c * d + b * e * f
   
-  val task = Future { t1.runM(compiler[Future](defaultCompiler, sayCompiler, promiseCompiler), debug = true) }
-  pb.success(ε)
+  val task = Future { t1.runM(compiler[Future](defaultCompiler, sayCompiler, controlledCompiler), debug = true) }
+  Thread.sleep(100)
+  ta(ε)
 
   Await.result(task, Duration.Inf)
 }

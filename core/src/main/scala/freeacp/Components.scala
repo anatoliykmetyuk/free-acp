@@ -30,6 +30,13 @@ trait FutureImpl {
       Future.firstCompletedOf(List(x1, x2))
     }}
   }
+
+  implicit val controlledFuture: Controlled[Future] = new Controlled[Future] {
+    override def obtain[A]: (A => Unit, Future[A]) = {
+      val p = Promise[A]()
+      (p.success, p.future)
+    }
+  }
 }
 
 object FutureImpl extends FutureImpl
@@ -55,13 +62,30 @@ trait SayElem {
   }
 }
 
-trait PromiseElem {
-  case class PromiseContainer(p: Promise[Result[LanguageT]]) extends LanguageT[Result[LanguageT]]
-  def promise(p: Promise[Result[LanguageT]], name: String = "promise") = new Suspend[LanguageT](PromiseContainer(p)) { override def toString = name }
+trait ControlledElem {
+  case class ControlledContainer() extends LanguageT[Result[LanguageT]] {
+    private[freeacp] var callback: Option[Result[LanguageT] => Unit] = None
+    def trigger(a: Result[LanguageT]) = callback.foreach(_.apply(a))
+  }
 
-  def promiseCompiler: PartialCompiler[Future] = _ => new (LanguageT ~> OptionK[Future, ?]) {
-    override def apply[A](s: LanguageT[A]): Option[Future[A]] = ({
-      case PromiseContainer(p) => p.future
-    }: PartialFunction[LanguageT[A], Future[A]]).lift.apply(s)
+  def controlled(name: String = "controlled"): (Result[LanguageT] => Unit, Language) = {
+    val (trigger, ctrldLang) = Controlled[LanguageT].obtain[Result[LanguageT]]
+    (trigger, new Suspend[LanguageT](ctrldLang) { override def toString = name })
+  }
+
+  implicit val controlledLangauge: Controlled[LanguageT] = new Controlled[LanguageT] {
+    override def obtain[A]: (A => Unit, LanguageT[A]) = {
+      val c = ControlledContainer()
+      (a => c.trigger(a.asInstanceOf[Result[LanguageT]]), c.asInstanceOf[LanguageT[A]])  // TODO: Casts
+    }
+  }
+
+  def controlledCompiler[F[_]: Controlled]: PartialCompiler[F] = _ => new (LanguageT ~> OptionK[F, ?]) {
+    override def apply[A](s: LanguageT[A]): Option[F[A]] = ({
+      case c: ControlledContainer =>
+        val (trigger, element) = Controlled[F].obtain[A]
+        c.callback = Some(trigger)
+        element.asInstanceOf[F[A]]
+    }: PartialFunction[LanguageT[A], F[A]]).lift.apply(s)
   }
 }

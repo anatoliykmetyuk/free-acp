@@ -20,3 +20,11 @@ object Suspended {
     override def apply[A](x: () => A): Future[A] = Future { x() }
   }
 }
+
+trait Controlled[S[_]] {
+  def obtain[A]: (A => Unit, S[A])
+}
+
+object Controlled {
+  def apply[S[_]](implicit e: Controlled[S]) = e
+}
