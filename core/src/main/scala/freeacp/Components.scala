@@ -63,9 +63,21 @@ trait SayElem {
 }
 
 trait ControlledElem {
-  case class ControlledContainer() extends LanguageT[Result[LanguageT]] {
-    private[freeacp] var callback: Option[Result[LanguageT] => Unit] = None
-    def trigger(a: Result[LanguageT]) = callback.foreach(_.apply(a))
+  case class ControlledContainer() extends LanguageT[Result[LanguageT]] {  // TODO: vars, mutability
+    private[freeacp] var _callback    : Option[Result[LanguageT] => Unit] = None
+    private[freeacp] var triggeredWith: Option[Result[LanguageT]        ] = None
+    
+    def callback = _callback
+    def callback_=(cb: Option[Result[LanguageT] => Unit]): Unit = { _callback = cb; doTrigger() }
+
+    def doTrigger(): Unit = for {
+      r  <- triggeredWith
+      cb <- callback
+    } cb(r)
+
+    def trigger(a: Result[LanguageT]) =
+      if  (triggeredWith.isDefined) throw new IllegalStateException("A controlled element can be triggered only once")
+      else { triggeredWith = Some(a); doTrigger }
   }
 
   def controlled(name: String = "controlled"): (Result[LanguageT] => Unit, Language) = {

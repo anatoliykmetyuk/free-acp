@@ -58,7 +58,6 @@ object FutureTest extends App with FutureImpl with SayElem with ControlledElem {
   val t1: Language = a * c * d + b * e * f
   
   val task = Future { t1.runM(compiler[Future](defaultCompiler, sayCompiler, controlledCompiler), debug = true) }
-  Thread.sleep(100)
   ta(ε)
 
   Await.result(task, Duration.Inf)
