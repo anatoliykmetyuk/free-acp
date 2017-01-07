@@ -37,8 +37,12 @@ class LookupFrameApplication extends SimpleSubscriptApplication {
   def confirmExit: Boolean = Dialog.showConfirmation(null, "Are you sure?", "About to exit")==Dialog.Result.Yes
   def sleep(time: Long) = Thread.sleep(time)
   
-  def liveScript     = ω * call(searchSequence) * atom { println("Hello World!") }
-  def searchSequence = button(searchButton) + key(Key.Enter)
+  def liveScript     = ω * call(searchSequence)
+  
+  def searchSequence = searchCommand * showSearchingText// * searchInDatabase * showSearchResults
+  def searchCommand  = button(searchButton) + key(Key.Enter)
+
+  def showSearchingText = gui { outputTA.text = "Searching: "+searchTF.text }
 
   // implicit script vkey(??k: Key.Value) = vkey2: top, ??k
 

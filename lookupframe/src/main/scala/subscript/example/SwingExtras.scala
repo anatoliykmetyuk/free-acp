@@ -13,7 +13,8 @@ abstract class SimpleSubscriptApplication extends SimpleSwingApplication
                                               with FutureImpl
                                               with ButtonElem
                                               with CallElem
-                                              with KeyElem {
+                                              with KeyElem
+                                              with GuiElem {
   override def startup(args: Array[String]) {
     super.startup(args)
     new Thread{override def run={live;quit}}.start()
@@ -40,6 +41,15 @@ trait KeyElem extends PromiseElem { this: SimpleSwingApplication =>
     val p = Promise[Result[LanguageT]]()
     lazy val reaction: PartialFunction[Event, Unit] = { case k: KeyPressed if k.key == keyCode => p.success(ε); top.reactions -= reaction }
     top.reactions += reaction
+
+    promise(p)
+  }
+}
+
+trait GuiElem extends PromiseElem {
+  def gui(task: => Unit) = {
+    val p = Promise[Result[LanguageT]]()
+    Swing.onEDTWait { task; p.success(ε) }
 
     promise(p)
   }
