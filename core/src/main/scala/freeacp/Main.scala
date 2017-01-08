@@ -9,6 +9,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import freeacp.engine._
 import freeacp.component._
 import LanguageT._
+import freeacp.util.DeactivatableFuture
 
 object Main extends App with EvalEngine with FutureEngine with Say {
   def a1 = atom { () }
@@ -48,18 +49,18 @@ object EvalTest extends App with Say with EvalEngine {
   t5.runM(compiler[Eval](defaultCompiler, sayCompiler), true)
 }
 
-object FutureTest extends App with FutureEngine with Say with ControlledElem {  
+object FutureTest extends App with FutureEngine with DeactivatableFutureEngine with Say with ControlledElem with LifecycleElem {  
   val (ta, a) = controlled("a")
   val (tb, b) = controlled("b")
 
-  val c = say("Hello"     , "c")
+  val c = withLifecycle(say("Hello", "c"))((), { println("Me done!") })
   val d = say("World"     , "d")
   val e = say("Something" , "e")
   val f = say("Else"      , "f")
 
   val t1: Language = a * c * d + b * e * f
   
-  val task = Future { t1.runM(compiler[Future](defaultCompiler, sayCompiler, controlledCompiler), debug = true) }
+  val task = Future { t1.runM(compiler[DeactivatableFuture](defaultCompiler, sayCompiler, controlledCompiler, lifecycleCompiler), debug = true) }
   ta(ε)
 
   Await.result(task, Duration.Inf)

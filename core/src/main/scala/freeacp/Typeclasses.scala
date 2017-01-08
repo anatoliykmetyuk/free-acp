@@ -28,8 +28,7 @@ object ChoiceK {
 }
 
 trait Lifecycle[S[_]] {
-  def onActivate  (x: S[_], f: () => Unit): Unit
-  def onDeactivate(x: S[_], f: () => Unit): Unit
+  def onDeactivate[A](x: S[A], f: () => Unit): S[A]
 }
 
 object Lifecycle {

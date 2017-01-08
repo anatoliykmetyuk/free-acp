@@ -10,13 +10,17 @@ import freeacp.engine._
 import freeacp.component._
 import freeacp.LanguageT._
 
+import freeacp.util.DeactivatableFuture
+
 import scala.concurrent.{Future, Promise}
 
 abstract class SimpleSubscriptApplication extends SimpleSwingApplication
                                               with FutureEngine
+                                              with DeactivatableFutureEngine
                                               with ButtonElem
                                               with KeyElem
-                                              with GuiElem {
+                                              with GuiElem
+                                              with LifecycleElem {
   override def startup(args: Array[String]) {
     super.startup(args)
     new Thread{override def run={live;quit}}.start()
@@ -25,17 +29,20 @@ abstract class SimpleSubscriptApplication extends SimpleSwingApplication
   val top: MainFrame
 
   def liveScript: Language
-  def live: Unit = liveScript.runM(compiler[Future](defaultCompiler, controlledCompiler), true)
+  def live: Unit = liveScript.runM(compiler[DeactivatableFuture](defaultCompiler, controlledCompiler, lifecycleCompiler), true)
 }
 
-trait ButtonElem extends ControlledElem {
+trait ButtonElem extends ControlledElem with LifecycleElem {
   def button(b: Button) = call {
     val (trigger, elem) = controlled()
     lazy val reaction: PartialFunction[Event, Unit] = { case _: ButtonClicked => trigger(ε); b.unsubscribe(reaction); b.enabled = false }
     b.subscribe(reaction)
-    
     b.enabled = true
-    elem
+    
+    withLifecycle(elem) {
+      println("FOOOO")
+      b.enabled = false
+    }
   }
 }
 
