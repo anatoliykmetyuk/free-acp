@@ -26,3 +26,12 @@ trait ChoiceK[S[_]] extends MonoidK[S]
 object ChoiceK {
   def apply[S[_]](implicit e: ChoiceK[S]) = e
 }
+
+trait Lifecycle[S[_]] {
+  def onActivate  (x: S[_], f: () => Unit): Unit
+  def onDeactivate(x: S[_], f: () => Unit): Unit
+}
+
+object Lifecycle {
+  def apply[S[_]](implicit e: Lifecycle[S]) = e
+}
