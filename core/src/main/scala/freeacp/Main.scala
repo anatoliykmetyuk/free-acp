@@ -6,9 +6,11 @@ import scala.concurrent.{Future, Promise, Await}
 import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 
+import freeacp.engine._
+import freeacp.component._
 import LanguageT._
 
-object Main extends App with EvalImpl with FutureImpl with SayElem {
+object Main extends App with EvalEngine with FutureEngine with Say {
   def a1 = atom { () }
   def a0 = atom { throw new RuntimeException }
 
@@ -29,7 +31,7 @@ object Main extends App with EvalImpl with FutureImpl with SayElem {
 
 }
 
-object EvalTest extends App with SayElem with EvalImpl {
+object EvalTest extends App with Say with EvalEngine {
   val a = say("Hello", "a")
   val b = say("World", "b")
   val c = say("!", "c")
@@ -41,12 +43,12 @@ object EvalTest extends App with SayElem with EvalImpl {
   val t5 = a * b + c * δ
   val t6 = Sequence(Sequence(Sequence(b, c, δ))) + Sequence(Sequence(a, b, c))
   val t7 = Sequence(a)
-  val t8 = Choice(Nil)
+  val t8: Language = Choice(Nil)
 
   t5.runM(compiler[Eval](defaultCompiler, sayCompiler), true)
 }
 
-object FutureTest extends App with FutureImpl with SayElem with ControlledElem {  
+object FutureTest extends App with FutureEngine with Say with ControlledElem {  
   val (ta, a) = controlled("a")
   val (tb, b) = controlled("b")
 
@@ -63,7 +65,7 @@ object FutureTest extends App with FutureImpl with SayElem with ControlledElem {
   Await.result(task, Duration.Inf)
 }
 
-object FreeAcp extends App with SayElem with EvalImpl {
+object FreeAcp extends App with Say with EvalEngine {
   val program = atom { println("Hello") } * atom { println("World" ) } * say("Foo")
   program.runM(compiler[Eval](defaultCompiler, sayCompiler), false)
 }

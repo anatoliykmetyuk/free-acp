@@ -6,8 +6,8 @@ trait LanguageT[+T]
 
 case class Atom(a: () => Unit) extends LanguageT[Result[LanguageT]]
 
-case class  MapLanguage[A, B](t1: LanguageT[A], f : A => B) extends LanguageT[B]
-case class  SuspendedLanguage[A](x: () => A) extends LanguageT[A]
+case class MapLanguage[A, B](t1: LanguageT[A], f : A => B) extends LanguageT[B]
+case class SuspendedLanguage[A](x: () => A) extends LanguageT[A]
 
 object LanguageT {
   type Language = Tree[LanguageT]
@@ -18,7 +18,7 @@ object LanguageT {
   def ε = Success[LanguageT]()
   def δ = Failure[LanguageT]()
   def ω = Loop   [LanguageT]()
-
+ 
   implicit val functorLanguage: Functor[LanguageT] = new Functor[LanguageT] {
     override def map[A, B](t: LanguageT[A])(f: A => B): LanguageT[B] = MapLanguage(t, f)
   }
@@ -26,7 +26,6 @@ object LanguageT {
   implicit val suspendedLanguage: Suspended[LanguageT] = new Suspended[LanguageT] {
     override def apply[A](x: () => A): LanguageT[A] = SuspendedLanguage(x)
   }
-
 
   type Compiler       [F[_]] = LanguageT ~> F
   type OptionK     [F[_], A] = Option[F[A]]                               // Higher-kinded Option

@@ -6,11 +6,14 @@ import scala.swing.event._
 import cats.~>
 
 import freeacp._
+import freeacp.engine._
+import freeacp.component._
 import freeacp.LanguageT._
+
 import scala.concurrent.{Future, Promise}
 
 abstract class SimpleSubscriptApplication extends SimpleSwingApplication
-                                              with FutureImpl
+                                              with FutureEngine
                                               with ButtonElem
                                               with KeyElem
                                               with GuiElem {

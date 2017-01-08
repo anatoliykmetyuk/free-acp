@@ -9,11 +9,10 @@ import org.scalacheck.Gen._
 import scala.concurrent.Future
 
 import LanguageT._
-import FutureImpl._
+import freeacp.engine.EvalEngine._
+import freeacp.engine.FutureEngine._
 
-abstract class TreeLaws[S[_]](name: String)(implicit val S: Suspended[S], val C: Comonad[S]) extends Properties(name) with TreeGens[S] {
-  implicit val M: MonoidK[S]
-
+abstract class TreeLaws[S[_]](name: String)(implicit val S: Suspended[S], val C: Comonad[S], val M: ChoiceK[S]) extends Properties(name) with TreeGens[S] {
   implicit def arbTree = Arbitrary(tree)
 
   property("Runnability") = forAll { t: Language => run(t).isInstanceOf[Result[LanguageT]] }
@@ -36,15 +35,15 @@ abstract class TreeLaws[S[_]](name: String)(implicit val S: Suspended[S], val C:
   property("ε * x == x") = forAll { x: Language => ε * x <-> x }
 }
 
-object EvalLaws   extends TreeLaws[Eval  ]("Eval laws"  ) { override implicit val M: MonoidK[Eval  ] = EvalImpl  .evalMonoidK   }
-object FutureLaws extends TreeLaws[Future]("Future laws") { override implicit val M: MonoidK[Future] = FutureImpl.futureMonoidK }
+object EvalLaws   extends TreeLaws[Eval  ]("Eval laws"  )
+object FutureLaws extends TreeLaws[Future]("Future laws")
 
 trait TreeGens[S[_]] {
   import LanguageT._
 
   implicit val S: Suspended[S]
   implicit val C: Comonad[S]
-  implicit val M: MonoidK[S]
+  implicit val M: ChoiceK[S]
 
   def run(t: Language) =
     try t.runM(compiler[S](defaultCompiler))

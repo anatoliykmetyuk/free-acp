@@ -52,11 +52,11 @@ trait Tree[S[_]] {
     rewriteLoop(this)
   }
 
-  def run(debug: Boolean = false)(implicit C: Comonad[S], SG: MonoidK[S]): Result[S] =
+  def run(debug: Boolean = false)(implicit C: Comonad[S], SG: ChoiceK[S]): Result[S] =
     runM(new (S ~> S) { override def apply[A](x: S[A]): S[A] = x }, debug)
 
   // See Cats' Free's `runM`
-  def runM[G[_]: Suspended, Functor](f: S ~> G, debug: Boolean = false, steps: Int = 1000)(implicit G: Comonad[G], M: MonoidK[G]): Result[G] = {
+  def runM[G[_]: Suspended, Functor](f: S ~> G, debug: Boolean = false, steps: Int = 1000)(implicit G: Comonad[G], M: ChoiceK[G]): Result[G] = {
     @annotation.tailrec
     def loop(t: Tree[S], i: Int): Result[G] = if (i > 0) {
       if (debug) println(s"\nDEBUG:\n$t")
