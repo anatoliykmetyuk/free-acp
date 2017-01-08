@@ -11,9 +11,9 @@ import scala.concurrent.Future
 import LanguageT._
 import freeacp.engine.EvalEngine._
 import freeacp.engine.FutureEngine._
-import freeacp.engine.CancelableFutureEngine._
+import freeacp.engine.DeactivatableFutureEngine._
 
-import freeacp.util.CancelableFuture
+import freeacp.util.DeactivatableFuture
 
 abstract class TreeLaws[S[_]](name: String)(implicit val S: Suspended[S], val C: Comonad[S], val M: ChoiceK[S]) extends Properties(name) with TreeGens[S] {
   implicit def arbTree = Arbitrary(tree)
@@ -40,7 +40,7 @@ abstract class TreeLaws[S[_]](name: String)(implicit val S: Suspended[S], val C:
 
 object EvalLaws   extends TreeLaws[Eval  ]("Eval laws"  )
 object FutureLaws extends TreeLaws[Future]("Future laws")
-object CancelableFutureLaws extends TreeLaws[CancelableFuture]("CancelableFuture laws")
+object DeactivatableFutureLaws extends TreeLaws[DeactivatableFuture]("DeactivatableFuture laws")
 
 trait TreeGens[S[_]] {
   import LanguageT._

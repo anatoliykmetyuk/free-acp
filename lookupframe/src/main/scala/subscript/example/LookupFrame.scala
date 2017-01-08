@@ -15,7 +15,7 @@ object LookupFrame extends LookupFrameApplication
 
 class LookupFrameApplication extends SimpleSubscriptApplication {
   
-  val outputTA     = new TextArea        {editable      = true  }
+  val outputTA     = new TextArea        {editable      = false }
   val searchButton = new Button("Go")    {enabled       = false }
   val searchLabel  = new Label("Search") {preferredSize = new Dimension(45,26)}
   val searchTF     = new TextField       {preferredSize = new Dimension(100, 26)}
