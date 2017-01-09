@@ -13,10 +13,16 @@ trait Tree[S[_]] {
     // Call
     case Call(t) => t()
 
-    // Sequence
+    // Loop
     case Sequence(xs) if xs.contains(Loop()) =>
       def seq: Tree[S] = Sequence( xs.filter(_ != Loop()) :+ new Suspend(S.suspend { seq }) { override def toString = "loopContinuation" } )
       seq
+    case Sequence(Sequence(x) :: y) if x.contains(Loop()) =>
+      def frag1: List[Tree[S]] = x.filter(_ != Loop())
+      def frag2: Tree[S] = Call { () => Sequence(frag1 :+ frag2) }
+      Sequence(frag2 +: y)
+
+    // Sequence
     case Sequence(Nil             ) => Success()
     case Sequence(Sequence(a) :: x) => Sequence(a ++ x)
     case Sequence(Call(t)     :: x) => Sequence(t() :: x)
@@ -26,7 +32,7 @@ trait Tree[S[_]] {
     // Choice
     case Choice(Nil) => Failure()
     case Choice  (Choice(x) :: y) => Choice(x ++ y)  // choice-associativity
-    case Sequence(Choice(x) :: y) => Choice(x.map { t => Sequence(t :: y) }) // seq-associativity
+    case Sequence(Choice(x) :: y) => Choice(x.map { t => Sequence(t :: y) }) // seq-choice distributivity
     case Choice(x) if x.contains(Success()) => Success()
     case Choice(x) if x.contains(Failure()) => Choice(x.filter(_ != Failure()))
     case Choice(x) if x.exists(!resume.isDefinedAt(_)) => Choice(x.map {
@@ -40,7 +46,7 @@ trait Tree[S[_]] {
     case Suspend(r: S[Tree[S]]) => List(r)
     
     // Sequence
-    case Sequence(Suspend(r: S[Tree[S]]) :: x) => List( F.map(r) { rs => Sequence(rs :: x) } )
+    case Sequence(Suspend(r: S[Tree[S]]) :: x) if !x.contains(Loop()) => List( F.map(r) { rs => Sequence(rs :: x) } )
 
     // Choice
     case Choice(x @ _ :: _) if x.forall(resume.isDefinedAt) => x.flatMap(resume) // Foldable[List].combineAll(x.map(resume))(S.monoidK.algebra[Tree[S]])

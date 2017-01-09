@@ -12,24 +12,15 @@ import LanguageT._
 import freeacp.util.DeactivatableFuture
 
 object Main extends App with EvalEngine with FutureEngine with Say {
-  def a1 = atom { () }
-  def a0 = atom { throw new RuntimeException }
+  val a = say("a")
+  val b = say("b")
 
-  val x = a0
-  val y = (Choice[LanguageT](Nil) + Choice[LanguageT](Nil) + Choice[LanguageT](List(Choice[LanguageT](Nil))) + Sequence(List(Choice[LanguageT](Nil))) + a1 + Choice[LanguageT](Nil) + Sequence(List(a0)) + a0 + δ)
-  val z = (Sequence[LanguageT](Nil) * Sequence[LanguageT](Nil) * a1 * Sequence[LanguageT](Nil) * Sequence(List(a0)) * Choice(List(ε)))
-
-  val t1 = call(a0 * say("Foo")) + call(a1 * say("Bar"))
-  val t2 = call(a1)
-
-  println("T1")
-  val r1 = t1.runM(compiler[Future](defaultCompiler, sayCompiler), true)
+  val t1 = (a * ω) * b   // trace: aaaaaaaaaaaaaaaa.....
+  val t2 = a * (b * ω)   // trace: abbbbbbbbbbbbbbb.....
+  val t3 = a * b * ω     // trace: abababababababab.....
+  
+  val r1 = t2.runM(compiler[Future](defaultCompiler, sayCompiler), true)
   println(r1)
-
-  println("T2")
-  val r2 = t2.runM(compiler[Future](defaultCompiler, sayCompiler), true)
-  println(r2)
-
 }
 
 object EvalTest extends App with Say with EvalEngine {
