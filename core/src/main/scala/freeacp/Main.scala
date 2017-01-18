@@ -12,14 +12,15 @@ import LanguageT._
 import freeacp.util.DeactivatableFuture
 
 object Main extends App with EvalEngine with FutureEngine with Say {
-  val a = say("a")
-  val b = say("b")
+  def t(n: String) = atom(n) { () }
 
-  val t1 = (a * ω) * b   // trace: aaaaaaaaaaaaaaaa.....
-  val t2 = a * (b * ω)   // trace: abbbbbbbbbbbbbbb.....
-  val t3 = a * b * ω     // trace: abababababababab.....
-  
-  val r1 = t2.runM(compiler[Future](defaultCompiler, sayCompiler), true)
+  val a = t("a")
+  val b = t("b")
+  val c = t("c")
+
+  val t1 = a * b * c
+
+  val r1 = t1.runM(compiler[Future](defaultCompiler, sayCompiler), true)
   println(r1)
 }
 

@@ -14,3 +14,5 @@ trait Say {
     }: PartialFunction[LanguageT[A], F[A]]).lift.apply(s)
   }
 }
+
+object Say extends Say

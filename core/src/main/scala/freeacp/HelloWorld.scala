@@ -1,10 +1,3 @@
-# FreeACP
-FreeACP is a process algebra engine, inspired by the idea of the free objects. This is a work in progress, for the progress report see [this article](http://akmetiuk.com/blog/2017/01/11/rewriting-process-algebra-part-1-introduction-to-process-algebra.html).
-
-## Example
-The code is a Hello World program in FreeACP, commented line-by-line. You can also execute it by cloning this repository, executing `sbt core/run` and selecting `freeacp.HelloWorld`. See also a more advanced [GUI example](https://github.com/anatoliykmetyuk/free-acp/blob/master/lookupframe/src/main/scala/subscript/example/LookupFrame.scala).
-
-```scala
 package freeacp
 
 import scala.concurrent.Future
@@ -36,4 +29,3 @@ object HelloWorld extends App {
       ), debug = false    // If `true`, will print the tree rewritings on each step of the execution.
     )
 }
-```

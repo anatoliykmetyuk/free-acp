@@ -7,9 +7,6 @@ import scala.swing.event._
 
 import freeacp.LanguageT._
 
-// Subscript sample application: a text entry field with a search button, that simulates the invocation of a background search
-//
-// Note: the main part of this source file has been manually compiled from Subscript code into plain Scala
 
 object LookupFrame extends LookupFrameApplication
 
