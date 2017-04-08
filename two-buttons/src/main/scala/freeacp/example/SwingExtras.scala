@@ -1,4 +1,4 @@
-package subscript.example
+package freeacp.example
 
 import scala.swing._
 import scala.swing.event._

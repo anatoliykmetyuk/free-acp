@@ -1,4 +1,4 @@
-package subscript.example
+package freeacp.example
 
 import scala.language.implicitConversions
 
@@ -10,7 +10,7 @@ import freeacp.LanguageT._
 
 object TwoButtons extends TwoButtonsApplication
 
-class TwoButtonsApplication extends SimpleSubscriptApplication {
+class TwoButtonsApplication extends SimpleFreeACPApplication {
   
   val outputTA = new TextArea           { editable = false }
   val button1  = new Button("Button 1") { enabled  = false }
