@@ -32,5 +32,7 @@ class LookupFrameApplication extends SimpleSubscriptApplication {
   
   def setText(str: String) = call(gui { outputTA.text = str })
   
-  val liveScript = ω * lifecycle
+  val liveScript = lifecycle * sleep
+
+  def sleep = call { atom { Thread.sleep(Int.MaxValue) } }
 }
