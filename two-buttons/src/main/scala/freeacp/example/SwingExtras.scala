@@ -14,13 +14,13 @@ import freeacp.util.DeactivatableFuture
 
 import scala.concurrent.{Future, Promise}
 
-abstract class SimpleSubscriptApplication extends SimpleSwingApplication
-                                              with FutureEngine
-                                              with DeactivatableFutureEngine
-                                              with ButtonElem
-                                              with KeyElem
-                                              with GuiElem
-                                              with LifecycleElem {
+abstract class SimpleFreeACPApplication extends SimpleSwingApplication
+                                           with FutureEngine
+                                           with DeactivatableFutureEngine
+                                           with ButtonElem
+                                           with KeyElem
+                                           with GuiElem
+                                           with LifecycleElem {
   override def startup(args: Array[String]) {
     super.startup(args)
     new Thread{override def run={live;quit}}.start()
