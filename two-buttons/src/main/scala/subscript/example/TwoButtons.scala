@@ -8,9 +8,9 @@ import scala.swing.event._
 import freeacp.LanguageT._
 
 
-object LookupFrame extends LookupFrameApplication
+object TwoButtons extends TwoButtonsApplication
 
-class LookupFrameApplication extends SimpleSubscriptApplication {
+class TwoButtonsApplication extends SimpleSubscriptApplication {
   
   val outputTA = new TextArea           { editable = false }
   val button1  = new Button("Button 1") { enabled  = false }

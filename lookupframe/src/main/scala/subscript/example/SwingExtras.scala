@@ -40,7 +40,6 @@ trait ButtonElem extends ControlledElem with LifecycleElem {
     b.enabled = true
     
     withLifecycle(elem) {
-      println("FOOOO")
       b.enabled = false
     }
   }
