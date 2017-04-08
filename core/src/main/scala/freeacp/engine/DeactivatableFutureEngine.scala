@@ -20,7 +20,7 @@ trait DeactivatableFutureEngine {
     override def empty[A] = DeactivatableFuture(cf.empty[A])
     override def combineK[A](f1: DeactivatableFuture[A], f2: DeactivatableFuture[A]): DeactivatableFuture[A] = {
       val combined = cf.combineK(f1.underlying, f2.underlying)
-      val result   = DeactivatableFuture(combined)
+      val result   = DeactivatableFuture(combined, f1.callbacks ++ f2.callbacks)
       combined.onComplete { _ => f1.deactivate(); f2.deactivate(); result.deactivate() }  // TODO: Redundancy
       result
     }

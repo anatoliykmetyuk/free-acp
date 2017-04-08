@@ -53,7 +53,7 @@ object FutureTest extends App with FutureEngine with DeactivatableFutureEngine w
   val t1: Language = a * c * d + b * e * f
   
   val task = Future { t1.runM(compiler[DeactivatableFuture](defaultCompiler, sayCompiler, controlledCompiler, lifecycleCompiler), debug = true) }
-  ta(ε)
+  tb(ε)
 
   Await.result(task, Duration.Inf)
 }
