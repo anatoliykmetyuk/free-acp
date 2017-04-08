@@ -51,3 +51,10 @@ lazy val lookupframe = (project in file("lookupframe"))
   .settings(
     libraryDependencies += "org.scala-lang.modules" %% "scala-swing" % ScalaSwing
   )
+
+lazy val twoButtons = (project in file("two-buttons"))
+  .dependsOn(core)
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies += "org.scala-lang.modules" %% "scala-swing" % ScalaSwing
+  )
